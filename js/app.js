@@ -42,8 +42,18 @@ function render() {
 // --- Welcome Screen ---
 function renderWelcome() {
   return `
-    <div class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 drag-region">
-      <div class="no-drag max-w-md w-full space-y-8 p-8">
+    <div class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 drag-region relative overflow-hidden">
+      <!-- Background icon -->
+      <div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.04] dark:opacity-[0.06]">
+        <svg viewBox="0 0 1024 1024" class="w-[600px] h-[600px]">
+          <path d="M512 100 L820 240 C820 240 850 600 512 920 C174 600 204 240 204 240 Z" fill="currentColor"/>
+          <g transform="translate(512, 500)">
+            <rect x="-80" y="-20" width="160" height="120" rx="20" fill="white" class="text-gray-50 dark:text-gray-950"/>
+            <path d="M-48,-20 L-48,-70 A48,48 0 0,1 48,-70 L48,-20" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round"/>
+          </g>
+        </svg>
+      </div>
+      <div class="no-drag max-w-md w-full space-y-8 p-8 relative z-10">
         <div class="text-center">
           <h1 class="text-4xl font-bold text-gray-900 dark:text-white">Victory's Secrets</h1>
           <p class="mt-2 text-gray-500 dark:text-gray-400">Gestionnaire de secrets local</p>
@@ -284,7 +294,7 @@ function renderSecrets() {
   const services = Object.entries(data.services || {});
 
   // Build project/env options
-  let projectOptions = projects.map(([id, p]) => `<option value="${id}">${esc(p.label)}</option>`).join('');
+  let projectOptions = projects.map(([id, p]) => `<option value="${id}" ${id === selectedProject ? 'selected' : ''}>${esc(p.label)}</option>`).join('');
   let envOptions = '';
   if (selectedProject && data.projects[selectedProject]) {
     envOptions = (data.projects[selectedProject].environments || [])
