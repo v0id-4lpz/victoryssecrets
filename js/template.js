@@ -1,6 +1,6 @@
 // template.js — .env generation from templates + resolved secrets
 
-export function resolveSecrets(vault, projectId, envId) {
+export function resolveSecrets(vault, envId) {
   const resolved = {}; // { serviceId: { field: value } }
 
   // 1. Global level
@@ -12,17 +12,8 @@ export function resolveSecrets(vault, projectId, envId) {
     }
   }
 
-  // 2. Project level
-  const projectSecrets = vault.secrets?.projects?.[projectId]?._project || {};
-  for (const [serviceId, fields] of Object.entries(projectSecrets)) {
-    resolved[serviceId] = resolved[serviceId] || {};
-    for (const [field, entry] of Object.entries(fields)) {
-      resolved[serviceId][field] = entry.value;
-    }
-  }
-
-  // 3. Environment level (wins)
-  const envSecrets = vault.secrets?.projects?.[projectId]?.[envId] || {};
+  // 2. Environment level (wins)
+  const envSecrets = vault.secrets?.envs?.[envId] || {};
   for (const [serviceId, fields] of Object.entries(envSecrets)) {
     resolved[serviceId] = resolved[serviceId] || {};
     for (const [field, entry] of Object.entries(fields)) {
@@ -33,17 +24,16 @@ export function resolveSecrets(vault, projectId, envId) {
   return resolved;
 }
 
-export function generateEnv(vault, projectId, envId) {
-  const template = vault.templates?.[projectId]?.[envId];
+export function generateEnv(vault, envId) {
+  const template = vault.templates?.[envId];
   if (!template) return { output: '', warnings: [] };
 
-  const resolved = resolveSecrets(vault, projectId, envId);
+  const resolved = resolveSecrets(vault, envId);
   const warnings = [];
   const lines = [];
 
   const magicVars = {
     _ENV_NAME: envId,
-    _PROJECT_NAME: projectId,
   };
 
   for (const [key, rawValue] of Object.entries(template)) {

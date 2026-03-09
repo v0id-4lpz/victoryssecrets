@@ -1,16 +1,16 @@
-// vault.js — vault data model and CRUD operations
+// vault.js — vault data model and CRUD operations (1 vault = 1 project)
 
 import { encrypt, decrypt } from './crypto.js';
 import { saveFile, hasFile } from './storage.js';
 
 function createEmpty() {
   return {
-    version: 1,
+    version: 2,
     services: {},
-    projects: {},
+    environments: [],
     secrets: {
       global: {},
-      projects: {},
+      envs: {},
     },
     templates: {},
   };
@@ -64,21 +64,15 @@ export async function deleteService(id) {
   // Clean up secrets referencing this service
   const cleanLevel = (obj) => { if (obj?.[id]) delete obj[id]; };
   cleanLevel(vaultData.secrets.global);
-  for (const projId of Object.keys(vaultData.secrets.projects || {})) {
-    const proj = vaultData.secrets.projects[projId];
-    cleanLevel(proj._project);
-    for (const envId of Object.keys(proj)) {
-      if (envId !== '_project') cleanLevel(proj[envId]);
-    }
+  for (const envId of Object.keys(vaultData.secrets.envs || {})) {
+    cleanLevel(vaultData.secrets.envs[envId]);
   }
   // Clean up template references
-  for (const projId of Object.keys(vaultData.templates || {})) {
-    for (const envId of Object.keys(vaultData.templates[projId] || {})) {
-      const tpl = vaultData.templates[projId][envId];
-      for (const [key, val] of Object.entries(tpl)) {
-        const m = val.match(/^\$\{(.+?)\.(.+)\}$/);
-        if (m && m[1] === id) delete tpl[key];
-      }
+  for (const envId of Object.keys(vaultData.templates || {})) {
+    const tpl = vaultData.templates[envId];
+    for (const [key, val] of Object.entries(tpl)) {
+      const m = val.match(/^\$\{(.+?)\.(.+)\}$/);
+      if (m && m[1] === id) delete tpl[key];
     }
   }
   await persist();
@@ -91,59 +85,33 @@ export async function renameService(id, newLabel) {
   }
 }
 
-// --- Projects ---
-
-export async function addProject(id, label) {
-  vaultData.projects[id] = { label, environments: [] };
-  vaultData.secrets.projects[id] = { _project: {} };
-  vaultData.templates[id] = {};
-  await persist();
-}
-
-export async function deleteProject(id) {
-  delete vaultData.projects[id];
-  delete vaultData.secrets.projects[id];
-  delete vaultData.templates[id];
-  await persist();
-}
-
-export async function renameProject(id, newLabel) {
-  if (vaultData.projects[id]) {
-    vaultData.projects[id].label = newLabel;
-    await persist();
-  }
-}
-
 // --- Environments ---
 
-export async function addEnvironment(projectId, envId) {
-  if (!vaultData.projects[projectId]) return;
-  if (!vaultData.projects[projectId].environments.includes(envId)) {
-    vaultData.projects[projectId].environments.push(envId);
+export async function addEnvironment(envId) {
+  if (!vaultData.environments.includes(envId)) {
+    vaultData.environments.push(envId);
   }
-  if (!vaultData.secrets.projects[projectId]) {
-    vaultData.secrets.projects[projectId] = { _project: {} };
+  if (!vaultData.secrets.envs[envId]) {
+    vaultData.secrets.envs[envId] = {};
   }
-  vaultData.secrets.projects[projectId][envId] = {};
-  if (!vaultData.templates[projectId]) vaultData.templates[projectId] = {};
-  vaultData.templates[projectId][envId] = {};
+  if (!vaultData.templates[envId]) {
+    vaultData.templates[envId] = {};
+  }
   await persist();
 }
 
-export async function deleteEnvironment(projectId, envId) {
-  if (!vaultData.projects[projectId]) return;
-  const envs = vaultData.projects[projectId].environments;
-  const idx = envs.indexOf(envId);
-  if (idx !== -1) envs.splice(idx, 1);
-  delete vaultData.secrets.projects?.[projectId]?.[envId];
-  delete vaultData.templates?.[projectId]?.[envId];
+export async function deleteEnvironment(envId) {
+  const idx = vaultData.environments.indexOf(envId);
+  if (idx !== -1) vaultData.environments.splice(idx, 1);
+  delete vaultData.secrets.envs[envId];
+  delete vaultData.templates[envId];
   await persist();
 }
 
 // --- Secrets ---
 
 export async function setSecret(level, serviceId, fieldName, value, isSecret = true) {
-  // level: { scope: 'global' } | { scope: 'project', projectId } | { scope: 'env', projectId, envId }
+  // level: { scope: 'global' } | { scope: 'env', envId }
   const target = getSecretsAtLevel(level);
   if (!target[serviceId]) target[serviceId] = {};
   target[serviceId][fieldName] = { value, secret: isSecret };
@@ -162,37 +130,28 @@ export async function deleteSecret(level, serviceId, fieldName) {
 export function getSecretsAtLevel(level) {
   if (level.scope === 'global') {
     return vaultData.secrets.global;
-  } else if (level.scope === 'project') {
-    if (!vaultData.secrets.projects[level.projectId]) {
-      vaultData.secrets.projects[level.projectId] = { _project: {} };
-    }
-    return vaultData.secrets.projects[level.projectId]._project;
   } else if (level.scope === 'env') {
-    if (!vaultData.secrets.projects[level.projectId]) {
-      vaultData.secrets.projects[level.projectId] = { _project: {} };
+    if (!vaultData.secrets.envs[level.envId]) {
+      vaultData.secrets.envs[level.envId] = {};
     }
-    if (!vaultData.secrets.projects[level.projectId][level.envId]) {
-      vaultData.secrets.projects[level.projectId][level.envId] = {};
-    }
-    return vaultData.secrets.projects[level.projectId][level.envId];
+    return vaultData.secrets.envs[level.envId];
   }
   return {};
 }
 
 // --- Templates ---
 
-export async function setTemplateEntry(projectId, envId, key, value) {
-  if (!vaultData.templates[projectId]) vaultData.templates[projectId] = {};
-  if (!vaultData.templates[projectId][envId]) vaultData.templates[projectId][envId] = {};
-  vaultData.templates[projectId][envId][key] = value;
+export async function setTemplateEntry(envId, key, value) {
+  if (!vaultData.templates[envId]) vaultData.templates[envId] = {};
+  vaultData.templates[envId][key] = value;
   await persist();
 }
 
-export async function deleteTemplateEntry(projectId, envId, key) {
-  delete vaultData.templates?.[projectId]?.[envId]?.[key];
+export async function deleteTemplateEntry(envId, key) {
+  delete vaultData.templates?.[envId]?.[key];
   await persist();
 }
 
-export function getTemplate(projectId, envId) {
-  return vaultData.templates?.[projectId]?.[envId] || {};
+export function getTemplate(envId) {
+  return vaultData.templates?.[envId] || {};
 }
