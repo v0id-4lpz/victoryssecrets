@@ -39,8 +39,8 @@ app.on('activate', () => {
 ipcMain.handle('file:create', async () => {
   const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
     title: 'Creer un vault',
-    defaultPath: 'secrets.vault.vs',
-    filters: [{ name: "Victory's Secrets Vault", extensions: ['vault.vs'] }],
+    defaultPath: 'secrets.vsv',
+    filters: [{ name: "Victory's Secrets Vault", extensions: ['vsv'] }],
   });
   if (canceled || !filePath) return null;
   return filePath;
@@ -49,7 +49,7 @@ ipcMain.handle('file:create', async () => {
 ipcMain.handle('file:open', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
     title: 'Ouvrir un vault',
-    filters: [{ name: "Victory's Secrets Vault", extensions: ['vault.vs'] }],
+    filters: [{ name: "Victory's Secrets Vault", extensions: ['vsv'] }],
     properties: ['openFile'],
   });
   if (canceled || filePaths.length === 0) return null;

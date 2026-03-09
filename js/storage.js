@@ -17,8 +17,8 @@ export async function createFile() {
     return filePath;
   } else {
     const handle = await window.showSaveFilePicker({
-      suggestedName: 'secrets.vault.vs',
-      types: [{ description: "Victory's Secrets Vault", accept: { 'application/octet-stream': ['.vault.vs'] } }],
+      suggestedName: 'secrets.vsv',
+      types: [{ description: "Victory's Secrets Vault", accept: { 'application/octet-stream': ['.vsv'] } }],
     });
     fileHandle = handle;
     return handle;
@@ -33,7 +33,7 @@ export async function openFile() {
     return result.buffer;
   } else {
     const [handle] = await window.showOpenFilePicker({
-      types: [{ description: "Victory's Secrets Vault", accept: { 'application/octet-stream': ['.vault.vs'] } }],
+      types: [{ description: "Victory's Secrets Vault", accept: { 'application/octet-stream': ['.vsv'] } }],
     });
     fileHandle = handle;
     const file = await handle.getFile();
