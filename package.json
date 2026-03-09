@@ -1,0 +1,44 @@
+{
+  "name": "victors-secrets",
+  "version": "1.0.0",
+  "description": "Local secrets & config manager",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "build": {
+    "appId": "com.victors-secrets.app",
+    "productName": "Victory's Secrets",
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "js/**/*"
+    ],
+    "afterPack": "./afterPack.js",
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.developer-tools",
+      "identity": null,
+      "type": "development"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  },
+  "devDependencies": {
+    "electron": "^40.8.0",
+    "electron-builder": "^26.8.1"
+  }
+}
