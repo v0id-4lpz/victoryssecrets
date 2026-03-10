@@ -4,7 +4,7 @@ const fs = require('fs');
 
 const MAX_VAULT_SIZE = 10 * 1024 * 1024; // 10 MB
 const APP_VERSION = require('./package.json').version;
-const RELEASES_API_URL = 'https://api.github.com/repos/v0id-4lpz/victoryssecrets/releases/latest';
+const RELEASES_API_URL = 'https://api.github.com/repositories/1177216392/releases/latest';
 const VAULT_EXTENSION = '.vsv';
 
 let mainWindow;
