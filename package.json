@@ -1,5 +1,5 @@
 {
-  "name": "victors-secrets",
+  "name": "victoryssecrets",
   "version": "1.0.0",
   "description": "Local secrets & config manager",
   "main": "main.js",
