@@ -19,50 +19,60 @@ La sécurité est une priorité absolue de l'app.
 ## UI
 
 - Tailwind v4 local (`npm run css` pour build, `npm run css:watch` pour dev)
-- Vanilla JS — composants `renderX()` (HTML string) + `bindX(render)` (event handlers)
+- TypeScript strict — composants `renderX()` (HTML string) + `bindX(render)` (event handlers)
+- Build : `npm run build:ts` (esbuild bundle `src/app.ts` → `build/app.js`)
 - Formulaires inline via `startInlineEdit(container, { rows, onSave, onCancel, onInput, onReady })`
 
 ## Architecture
 
 ```
-js/
+src/                          ← sources TypeScript
+  types/
+    vault.ts                    VaultData, SecretEntry, Service, etc.
+    electron-api.d.ts           window.electronAPI typing
   models/                     ← données pures, aucun side effect
-    vault-schema.js             structure vault + ensureStructure
-    validators.js               sanitizeId, labelToId, validate*
-    template-refactor.js        refactoring refs ${service.field} dans templates
+    vault-schema.ts             structure vault + ensureStructure
+    validators.ts               sanitizeId, labelToId, validate*
+    template-refactor.ts        refactoring refs ${service.field} dans templates
   services/                   ← logique métier pure (data in → data out)
-    service-ops.js              CRUD services + cleanup secrets/templates
-    environment-ops.js          CRUD environnements
-    secret-ops.js               CRUD secrets + move avec refactoring
-    template-ops.js             CRUD templates + parseEnvFile + buildServiceFieldTree
-    env-generator.js            resolveSecrets + generateEnv
-    search.js                   buildSearchIndex + filterSearch
-  vault.js                    ← orchestrateur stateful (état + crypto/storage + délègue aux services)
-  crypto.js                   ← AES-256-GCM + Argon2id via IPC
-  storage.js                  ← file handles via Electron API
-  autolock.js                 ← timer inactivité
-  generator.js                ← génération mots de passe (utilitaire crypto, pas logique métier)
+    service-ops.ts              CRUD services + cleanup secrets/templates
+    environment-ops.ts          CRUD environnements
+    secret-ops.ts               CRUD secrets + move avec refactoring
+    template-ops.ts             CRUD templates + parseEnvFile + buildServiceFieldTree
+    env-generator.ts            resolveSecrets + generateEnv
+    search.ts                   buildSearchIndex + filterSearch
+  vault.ts                    ← orchestrateur stateful (état + crypto/storage + délègue aux services)
+  crypto.ts                   ← AES-256-GCM + Argon2id via IPC
+  storage.ts                  ← file handles via Electron API
+  autolock.ts                 ← timer inactivité
+  generator.ts                ← génération mots de passe (utilitaire crypto, pas logique métier)
   ui/                         ← composants UI (render + bind)
-    helpers.js                  état partagé (currentSection, selectedEnv) + utilitaires (esc, fileName, dirName, shortenPath)
+    helpers.ts                  état partagé (currentSection, selectedEnv) + utilitaires (esc, fileName, dirName, shortenPath)
     components/                 boutons, inline-edit, toast, etc.
-    services.js, environments.js, secrets.js, templates.js, generate.js, welcome.js
-  app.js                      ← orchestrateur principal (routing, nav, modals)
+    services.ts, environments.ts, secrets.ts, templates.ts, generate.ts, welcome.ts
+  app.ts                      ← orchestrateur principal (routing, nav, modals)
+build/app.js                  ← bundle ESM unique (output esbuild, gitignored)
+tests/                        ← *.test.ts (importent depuis src/)
+main.js                       ← reste JS (CommonJS Electron main)
+preload.js                    ← reste JS (CommonJS Electron preload)
 ```
 
 ### Règles d'architecture
 
 - Les **models** et **services** sont des fonctions pures — pas d'état, pas d'IO, pas de DOM
-- `vault.js` est un wrapper mince : il appelle un service puis `persist()`
-- Les UI importent depuis `vault.js` pour les mutations async, et depuis `services/` ou `models/` pour la logique pure
+- `vault.ts` est un wrapper mince : il appelle un service puis `persist()`
+- Les UI importent depuis `vault.ts` pour les mutations async, et depuis `services/` ou `models/` pour la logique pure
 - **Pas de logique métier dans les fichiers UI** — extraire dans `services/` ou `models/`
-- **Pas de fonctions utilitaires dupliquées** — centraliser dans `ui/helpers.js` (formatage, échappement) ou dans `models/` (validation, sanitization)
+- **Pas de fonctions utilitaires dupliquées** — centraliser dans `ui/helpers.ts` (formatage, échappement) ou dans `models/` (validation, sanitization)
+- **Types centraux** dans `src/types/vault.ts` — toujours importer les types depuis ce fichier
 - **Constantes UI** (labels, couleurs, mappings) : déclarer en haut du module, pas inline dans les fonctions
 
 ## Tests
 
-- Vitest : `npm test` (run) / `npm run test:watch` (watch)
-- Tests dans `tests/models/` et `tests/services/`
+- Vitest : `npm test` (typecheck + run) / `npm run test:watch` (watch)
+- Tests TypeScript dans `tests/models/` et `tests/services/`
 - Tout nouveau service/model doit avoir ses tests
+- `npm run typecheck` pour vérifier les types sans exécuter
 
 ## GIT
 
