@@ -68,6 +68,14 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
+      - name: Flatten and rename artifacts
+        run: |
+          mkdir -p release
+          find artifacts -type f \( -name "*.dmg" -o -name "*.zip" -o -name "*.exe" -o -name "*.AppImage" -o -name "*.tar.gz" -o -name "*.nsis*" \) | while read f; do
+            name=$(basename "$f" | sed "s/'//g; s/ /-/g")
+            cp "$f" "release/$name"
+          done
+          ls -la release/
       - run: |
           VERSION="v${{ needs.check-version.outputs.version }}"
           git tag "$VERSION"
@@ -77,4 +85,4 @@ jobs:
           tag_name: v${{ needs.check-version.outputs.version }}
           name: v${{ needs.check-version.outputs.version }}
           generate_release_notes: true
-          files: artifacts/**/*
+          files: release/*
