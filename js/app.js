@@ -3,9 +3,8 @@
 import * as vault from './vault.js';
 import { getFilePath } from './storage.js';
 import { initTheme, toggleTheme } from './ui/theme.js';
-import { renderButton, setButtonLoading } from './ui/components/button.js';
+import { renderButton } from './ui/components/button.js';
 import { icons } from './ui/components/icon.js';
-import { MIN_PASSWORD_LENGTH, renderStrengthBar, updateStrengthBar } from './ui/components/password-strength.js';
 import { showToast } from './ui/components/toast.js';
 import { currentSection, setCurrentSection, esc, shortenPath } from './ui/helpers.js';
 import { renderWelcome, bindWelcome } from './ui/welcome.js';
@@ -14,6 +13,7 @@ import { renderEnvironments, bindEnvironments } from './ui/environments.js';
 import { renderSecrets, bindSecrets, clearSecretStore } from './ui/secrets.js';
 import { renderTemplates, bindTemplates } from './ui/templates.js';
 import { renderGenerate, bindGenerate } from './ui/generate.js';
+import { renderSettings, bindSettings } from './ui/settings.js';
 import { startAutoLock, stopAutoLock, setAutolockMinutes } from './autolock.js';
 import { buildSearchIndex as buildIndex, filterSearch as searchFilter } from './services/search.js';
 import { getEnvironmentComment } from './services/environment-ops.js';
@@ -33,76 +33,9 @@ function renderSection() {
     case 'secrets': return renderSecrets(render);
     case 'templates': return renderTemplates(render);
     case 'generate': return renderGenerate(render);
+    case 'settings': return renderSettings(render);
     default: return '';
   }
-}
-
-function renderChangePasswordModal() {
-  return `
-    <div id="change-password-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div class="bg-white dark:bg-gray-900 rounded-xl p-6 w-full max-w-sm border border-gray-200 dark:border-gray-700 shadow-xl space-y-4">
-        <h3 class="text-sm font-semibold">Changer le mot de passe</h3>
-        <div class="space-y-3">
-          <input id="chpw-current" type="password" placeholder="Mot de passe actuel" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-          <input id="chpw-new" type="password" placeholder="Nouveau mot de passe" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-          ${renderStrengthBar('chpw-strength')}
-          <input id="chpw-confirm" type="password" placeholder="Confirmer le nouveau mot de passe" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-          <p id="chpw-error" class="text-red-500 text-sm hidden"></p>
-          <p id="chpw-success" class="text-green-500 text-sm hidden"></p>
-        </div>
-        <div class="flex justify-end gap-2">
-          ${renderButton('Annuler', { id: 'chpw-cancel', variant: 'secondary' })}
-          ${renderButton('Changer', { id: 'chpw-submit', variant: 'primary' })}
-        </div>
-      </div>
-    </div>`;
-}
-
-function renderSettingsModal() {
-  const settings = vault.getSettings();
-  const data = vault.getData();
-  const serviceCount = Object.keys(data.services).length;
-  const envCount = data.environments.length;
-  const secretCount = Object.values(data.secrets.global).reduce((n, svc) => n + Object.keys(svc).length, 0)
-    + Object.values(data.secrets.envs).reduce((n, env) => n + Object.values(env).reduce((m, svc) => m + Object.keys(svc).length, 0), 0);
-  const templateCount = Object.keys(data.templates).length;
-
-  return `
-    <div id="settings-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div class="bg-white dark:bg-gray-900 rounded-xl p-6 w-full max-w-sm border border-gray-200 dark:border-gray-700 shadow-xl space-y-5">
-        <h3 class="text-sm font-semibold">Parametres</h3>
-
-        <div class="space-y-3">
-          <h4 class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Vault</h4>
-          <div class="grid grid-cols-2 gap-2 text-sm">
-            <span class="text-gray-500 dark:text-gray-400">Fichier</span>
-            <span class="truncate text-right" title="${esc(getFilePath())}">${esc(shortenPath(getFilePath()))}</span>
-            <span class="text-gray-500 dark:text-gray-400">Services</span>
-            <span class="text-right">${serviceCount}</span>
-            <span class="text-gray-500 dark:text-gray-400">Environnements</span>
-            <span class="text-right">${envCount}</span>
-            <span class="text-gray-500 dark:text-gray-400">Secrets</span>
-            <span class="text-right">${secretCount}</span>
-            <span class="text-gray-500 dark:text-gray-400">Templates</span>
-            <span class="text-right">${templateCount}</span>
-          </div>
-        </div>
-
-        <div class="space-y-3">
-          <h4 class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Securite</h4>
-          <div class="flex items-center justify-between">
-            <label for="settings-autolock" class="text-sm">Verrouillage auto (min)</label>
-            <select id="settings-autolock" class="px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-              ${[1, 2, 5, 10, 15, 30, 60].map(m => `<option value="${m}"${m === settings.autolockMinutes ? ' selected' : ''}>${m}</option>`).join('')}
-            </select>
-          </div>
-        </div>
-
-        <div class="flex justify-end">
-          ${renderButton('Fermer', { id: 'settings-close', variant: 'secondary' })}
-        </div>
-      </div>
-    </div>`;
 }
 
 function renderSearchModal() {
@@ -198,7 +131,7 @@ function bindSearch() {
 
 function renderMain() {
   return `
-    <div class="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white">
+    <div class="h-screen overflow-hidden bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white">
       <!-- Header -->
       <header class="drag-region bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-3 flex items-center justify-between">
         <div class="pl-16 flex items-baseline gap-3 min-w-0">
@@ -207,9 +140,7 @@ function renderMain() {
         </div>
         <div class="no-drag flex items-center gap-3">
           ${renderButton(icons.search(), { id: 'btn-search', variant: 'icon', title: 'Rechercher (Ctrl+K)' })}
-          ${renderButton(icons.gear(), { id: 'btn-settings', variant: 'icon', title: 'Parametres' })}
           ${renderButton(icons.theme(), { id: 'btn-theme', variant: 'icon', title: 'Toggle theme' })}
-          ${renderButton('Mot de passe', { id: 'btn-change-password', variant: 'ghost' })}
           ${renderButton('Verrouiller', { id: 'btn-lock', cls: 'px-3 py-1.5 text-sm rounded-lg bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50' })}
         </div>
       </header>
@@ -220,8 +151,12 @@ function renderMain() {
           ${renderNavItem('services', 'Services')}
           ${renderNavItem('environments', 'Environnements')}
           ${renderNavItem('secrets', 'Secrets')}
+          <div class="!mt-4 border-t border-gray-200 dark:border-gray-700 pt-3"></div>
           ${renderNavItem('templates', 'Templates')}
           ${renderNavItem('generate', 'Generer .env')}
+          <div class="!mt-4 border-t border-gray-200 dark:border-gray-700 pt-3">
+            ${renderNavItem('settings', 'Parametres')}
+          </div>
         </nav>
 
         <!-- Content -->
@@ -230,8 +165,6 @@ function renderMain() {
         </main>
       </div>
 
-      ${renderChangePasswordModal()}
-      ${renderSettingsModal()}
       ${renderSearchModal()}
       <!-- Privacy overlay on window blur -->
       <div id="privacy-overlay" class="hidden fixed inset-0 z-[100] bg-gray-50/80 dark:bg-gray-950/80 backdrop-blur-lg flex items-center justify-center">
@@ -241,86 +174,6 @@ function renderMain() {
         </div>
       </div>
     </div>`;
-}
-
-function bindChangePassword() {
-  const modal = document.getElementById('change-password-modal');
-  const errorEl = document.getElementById('chpw-error');
-  const successEl = document.getElementById('chpw-success');
-
-  document.getElementById('btn-change-password').onclick = () => {
-    modal.classList.remove('hidden');
-    document.getElementById('chpw-current').value = '';
-    document.getElementById('chpw-new').value = '';
-    document.getElementById('chpw-confirm').value = '';
-    errorEl.classList.add('hidden');
-    successEl.classList.add('hidden');
-    updateStrengthBar('', 'chpw-strength');
-    document.getElementById('chpw-current').focus();
-  };
-
-  document.getElementById('chpw-cancel').onclick = () => modal.classList.add('hidden');
-
-  document.getElementById('chpw-new').addEventListener('input', (e) => {
-    updateStrengthBar(e.target.value, 'chpw-strength');
-  });
-
-  document.getElementById('chpw-submit').onclick = async () => {
-    const current = document.getElementById('chpw-current').value;
-    const newPw = document.getElementById('chpw-new').value;
-    const confirm = document.getElementById('chpw-confirm').value;
-    const submitBtn = document.getElementById('chpw-submit');
-    errorEl.classList.add('hidden');
-    successEl.classList.add('hidden');
-
-    if (!current || !newPw) {
-      errorEl.textContent = 'Tous les champs sont requis';
-      errorEl.classList.remove('hidden');
-      return;
-    }
-    if (newPw.length < MIN_PASSWORD_LENGTH) {
-      errorEl.textContent = `Le nouveau mot de passe doit contenir au moins ${MIN_PASSWORD_LENGTH} caracteres`;
-      errorEl.classList.remove('hidden');
-      return;
-    }
-    if (newPw !== confirm) {
-      errorEl.textContent = 'Les mots de passe ne correspondent pas';
-      errorEl.classList.remove('hidden');
-      return;
-    }
-    setButtonLoading(submitBtn, true);
-    try {
-      await vault.changePassword(current, newPw);
-      setButtonLoading(submitBtn, false, 'Changer');
-      showToast('Mot de passe modifie', 'success');
-      setTimeout(() => modal.classList.add('hidden'), 800);
-    } catch {
-      setButtonLoading(submitBtn, false, 'Changer');
-      errorEl.textContent = 'Mot de passe actuel incorrect';
-      errorEl.classList.remove('hidden');
-    }
-  };
-}
-
-function bindSettings() {
-  const modal = document.getElementById('settings-modal');
-  document.getElementById('btn-settings').onclick = () => {
-    modal.classList.remove('hidden');
-  };
-  document.getElementById('settings-close').onclick = () => {
-    modal.classList.add('hidden');
-  };
-  modal.onclick = (e) => {
-    if (e.target === modal) modal.classList.add('hidden');
-  };
-
-  const autolockSelect = document.getElementById('settings-autolock');
-  autolockSelect.onchange = async () => {
-    const minutes = parseInt(autolockSelect.value, 10);
-    await vault.setAutolockMinutes(minutes);
-    setAutolockMinutes(minutes);
-    showToast(`Verrouillage auto: ${minutes} min`, 'success');
-  };
 }
 
 function bindMain() {
@@ -351,8 +204,6 @@ function bindMain() {
     document.getElementById('search-input').focus();
   };
 
-  bindChangePassword();
-  bindSettings();
   bindSearch();
 
   switch (currentSection) {
@@ -361,6 +212,7 @@ function bindMain() {
     case 'secrets': bindSecrets(render); break;
     case 'templates': bindTemplates(render); break;
     case 'generate': bindGenerate(render); break;
+    case 'settings': bindSettings(render); break;
   }
 }
 
