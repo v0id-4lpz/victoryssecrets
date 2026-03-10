@@ -71,7 +71,7 @@ jobs:
       - name: Flatten and rename artifacts
         run: |
           mkdir -p release
-          find artifacts -type f \( -name "*.dmg" -o -name "*.zip" -o -name "*.exe" -o -name "*.AppImage" -o -name "*.tar.gz" -o -name "*.nsis*" \) | while read f; do
+          find artifacts -type f \( -name "*.dmg" -o -name "*.zip" -o -name "*.exe" -o -name "*.AppImage" -o -name "*.tar.gz" \) ! -name "*.blockmap" | while read f; do
             name=$(basename "$f" | sed "s/'//g; s/ /-/g")
             cp "$f" "release/$name"
           done
