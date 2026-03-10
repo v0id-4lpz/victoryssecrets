@@ -4,7 +4,7 @@ import * as vault from '../vault.js';
 import * as storage from '../storage.js';
 import { getRecents, addRecent, removeRecent } from '../recents.js';
 import { toggleTheme } from './theme.js';
-import { renderButton } from './components/button.js';
+import { renderButton, setButtonLoading } from './components/button.js';
 import { renderDeleteButton } from './components/delete-button.js';
 import { icons } from './components/icon.js';
 import { MIN_PASSWORD_LENGTH, renderStrengthBar, updateStrengthBar } from './components/password-strength.js';
@@ -155,6 +155,8 @@ export function bindWelcome(render) {
   const submitPassword = async () => {
     const password = document.getElementById('password-input').value;
     const errorEl = document.getElementById('password-error');
+    const submitBtn = document.getElementById('btn-submit-password');
+    const submitLabel = submitBtn.textContent;
     errorEl.classList.add('hidden');
 
     if (!password) {
@@ -163,19 +165,23 @@ export function bindWelcome(render) {
       return;
     }
 
+    if (pendingAction === 'create') {
+      if (password.length < MIN_PASSWORD_LENGTH) {
+        errorEl.textContent = `Le mot de passe doit contenir au moins ${MIN_PASSWORD_LENGTH} caracteres`;
+        errorEl.classList.remove('hidden');
+        return;
+      }
+      const confirm = document.getElementById('password-confirm').value;
+      if (password !== confirm) {
+        errorEl.textContent = 'Les mots de passe ne correspondent pas';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+    }
+
+    setButtonLoading(submitBtn, true);
     try {
       if (pendingAction === 'create') {
-        if (password.length < MIN_PASSWORD_LENGTH) {
-          errorEl.textContent = `Le mot de passe doit contenir au moins ${MIN_PASSWORD_LENGTH} caracteres`;
-          errorEl.classList.remove('hidden');
-          return;
-        }
-        const confirm = document.getElementById('password-confirm').value;
-        if (password !== confirm) {
-          errorEl.textContent = 'Les mots de passe ne correspondent pas';
-          errorEl.classList.remove('hidden');
-          return;
-        }
         await vault.create(password);
       } else {
         await vault.open(pendingBuffer, password);
@@ -183,6 +189,7 @@ export function bindWelcome(render) {
       addRecent(storage.getFilePath());
       render();
     } catch (e) {
+      setButtonLoading(submitBtn, false, submitLabel);
       errorEl.textContent = 'Mot de passe incorrect ou fichier invalide';
       errorEl.classList.remove('hidden');
     }

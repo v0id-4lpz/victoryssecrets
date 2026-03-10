@@ -1,8 +1,9 @@
 // app.js — main orchestrator
 
 import * as vault from './vault.js';
+import { getFilePath } from './storage.js';
 import { initTheme, toggleTheme } from './ui/theme.js';
-import { renderButton } from './ui/components/button.js';
+import { renderButton, setButtonLoading } from './ui/components/button.js';
 import { icons } from './ui/components/icon.js';
 import { MIN_PASSWORD_LENGTH, renderStrengthBar, updateStrengthBar } from './ui/components/password-strength.js';
 import { currentSection, setCurrentSection } from './ui/helpers.js';
@@ -12,6 +13,17 @@ import { renderEnvironments, bindEnvironments } from './ui/environments.js';
 import { renderSecrets, bindSecrets } from './ui/secrets.js';
 import { renderTemplates, bindTemplates } from './ui/templates.js';
 import { renderGenerate, bindGenerate } from './ui/generate.js';
+
+function shortenPath(filePath) {
+  if (!filePath) return '';
+  try {
+    if (filePath.startsWith('/Users/')) {
+      const parts = filePath.split('/');
+      return '~/' + parts.slice(3).join('/');
+    }
+  } catch {}
+  return filePath;
+}
 
 function renderNavItem(section, label) {
   const active = currentSection === section;
@@ -58,7 +70,10 @@ function renderMain() {
     <div class="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white">
       <!-- Header -->
       <header class="drag-region bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-3 flex items-center justify-between">
-        <h1 class="text-xl font-bold pl-16">Victory's Secrets</h1>
+        <div class="pl-16 flex items-baseline gap-3 min-w-0">
+          <h1 class="text-xl font-bold shrink-0">Victory's Secrets</h1>
+          <span class="text-xs text-gray-400 truncate">${shortenPath(getFilePath())}</span>
+        </div>
         <div class="no-drag flex items-center gap-3">
           ${renderButton(icons.theme(), { id: 'btn-theme', variant: 'icon', title: 'Toggle theme' })}
           ${renderButton('Mot de passe', { id: 'btn-change-password', variant: 'ghost' })}
@@ -112,6 +127,7 @@ function bindChangePassword() {
     const current = document.getElementById('chpw-current').value;
     const newPw = document.getElementById('chpw-new').value;
     const confirm = document.getElementById('chpw-confirm').value;
+    const submitBtn = document.getElementById('chpw-submit');
     errorEl.classList.add('hidden');
     successEl.classList.add('hidden');
 
@@ -130,12 +146,15 @@ function bindChangePassword() {
       errorEl.classList.remove('hidden');
       return;
     }
+    setButtonLoading(submitBtn, true);
     try {
       await vault.changePassword(current, newPw);
+      setButtonLoading(submitBtn, false, 'Changer');
       successEl.textContent = 'Mot de passe modifie';
       successEl.classList.remove('hidden');
       setTimeout(() => modal.classList.add('hidden'), 1200);
     } catch {
+      setButtonLoading(submitBtn, false, 'Changer');
       errorEl.textContent = 'Mot de passe actuel incorrect';
       errorEl.classList.remove('hidden');
     }

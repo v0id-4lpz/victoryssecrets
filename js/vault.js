@@ -60,8 +60,8 @@ export function lock() {
 
 // --- Services ---
 
-export async function addService(id, label) {
-  vaultData.services[id] = { label };
+export async function addService(id, label, comment = '') {
+  vaultData.services[id] = { label, comment };
   await persist();
 }
 
@@ -91,12 +91,51 @@ export async function renameService(id, newLabel) {
   }
 }
 
+export async function renameServiceId(oldId, newId) {
+  if (!vaultData.services[oldId] || oldId === newId) return;
+  if (vaultData.services[newId]) return; // conflict
+  // Move service entry
+  vaultData.services[newId] = vaultData.services[oldId];
+  delete vaultData.services[oldId];
+  // Move secrets at all levels
+  const moveSecrets = (obj) => {
+    if (obj?.[oldId]) { obj[newId] = obj[oldId]; delete obj[oldId]; }
+  };
+  moveSecrets(vaultData.secrets.global);
+  for (const envId of Object.keys(vaultData.secrets.envs || {})) {
+    moveSecrets(vaultData.secrets.envs[envId]);
+  }
+  // Refactor templates: ${oldId.*} → ${newId.*}
+  for (const envId of Object.keys(vaultData.templates || {})) {
+    const tpl = vaultData.templates[envId];
+    for (const [key, val] of Object.entries(tpl)) {
+      if (typeof val === 'string') {
+        tpl[key] = val.replace(
+          new RegExp(`\\$\\{${oldId}\\.`, 'g'),
+          `\${${newId}.`
+        );
+      }
+    }
+  }
+  await persist();
+}
+
+export async function setServiceComment(id, comment) {
+  if (vaultData.services[id]) {
+    vaultData.services[id].comment = comment;
+    await persist();
+  }
+}
+
 // --- Environments ---
 
-export async function addEnvironment(envId) {
+export async function addEnvironment(envId, comment = '') {
   if (!vaultData.environments.includes(envId)) {
     vaultData.environments.push(envId);
   }
+  if (!vaultData.environmentMeta) vaultData.environmentMeta = {};
+  if (!vaultData.environmentMeta[envId]) vaultData.environmentMeta[envId] = {};
+  vaultData.environmentMeta[envId].comment = comment;
   if (!vaultData.secrets.envs[envId]) {
     vaultData.secrets.envs[envId] = {};
   }
@@ -118,6 +157,11 @@ export async function renameEnvironment(oldId, newId) {
     vaultData.templates[newId] = vaultData.templates[oldId];
     delete vaultData.templates[oldId];
   }
+  if (vaultData.environmentMeta?.[oldId]) {
+    if (!vaultData.environmentMeta) vaultData.environmentMeta = {};
+    vaultData.environmentMeta[newId] = vaultData.environmentMeta[oldId];
+    delete vaultData.environmentMeta[oldId];
+  }
   await persist();
 }
 
@@ -126,7 +170,19 @@ export async function deleteEnvironment(envId) {
   if (idx !== -1) vaultData.environments.splice(idx, 1);
   delete vaultData.secrets.envs[envId];
   delete vaultData.templates[envId];
+  delete vaultData.environmentMeta?.[envId];
   await persist();
+}
+
+export async function setEnvironmentComment(envId, comment) {
+  if (!vaultData.environmentMeta) vaultData.environmentMeta = {};
+  if (!vaultData.environmentMeta[envId]) vaultData.environmentMeta[envId] = {};
+  vaultData.environmentMeta[envId].comment = comment;
+  await persist();
+}
+
+export function getEnvironmentComment(envId) {
+  return vaultData.environmentMeta?.[envId]?.comment || '';
 }
 
 // --- Secrets ---
@@ -158,6 +214,31 @@ export function getSecretsAtLevel(level) {
     return vaultData.secrets.envs[level.envId];
   }
   return {};
+}
+
+/**
+ * Refactors all template references matching `${serviceId.oldField}` to `${serviceId.newField}`.
+ * Also handles service id renames: `${oldServiceId.*}` → `${newServiceId.*}`.
+ */
+function refactorTemplates(pattern, replacement) {
+  for (const envId of Object.keys(vaultData.templates || {})) {
+    const tpl = vaultData.templates[envId];
+    for (const [key, val] of Object.entries(tpl)) {
+      if (typeof val === 'string' && val.includes(pattern)) {
+        tpl[key] = val.replace(pattern, replacement);
+      }
+    }
+  }
+}
+
+export async function renameSecretField(level, serviceId, oldField, newField) {
+  const target = getSecretsAtLevel(level);
+  if (!target[serviceId]?.[oldField]) return;
+  target[serviceId][newField] = target[serviceId][oldField];
+  delete target[serviceId][oldField];
+  // Refactor all templates
+  refactorTemplates(`\${${serviceId}.${oldField}}`, `\${${serviceId}.${newField}}`);
+  await persist();
 }
 
 // --- Templates ---

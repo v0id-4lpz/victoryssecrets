@@ -7,6 +7,7 @@ import { renderButton } from './components/button.js';
 import { renderDeleteButton, bindDeleteButtons } from './components/delete-button.js';
 import { bindEditableRows } from './components/editable-row.js';
 import { renderEmptyState } from './components/empty-state.js';
+import { startInlineEdit } from './components/inline-edit.js';
 
 function parseEnvFile(text) {
   const keys = [];
@@ -43,44 +44,38 @@ function buildServiceFieldTree() {
   return { services, fieldsByService };
 }
 
-function renderValuePicker() {
+function renderValuePickerDropdown() {
   const { services, fieldsByService } = buildServiceFieldTree();
   const serviceEntries = Object.entries(fieldsByService);
   return `
-    <div class="relative w-72">
-      <button id="tpl-value-btn" type="button" class="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-mono text-left text-gray-400 truncate focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-        Choisir une valeur...
-      </button>
-      <div id="tpl-value-dropdown" class="hidden absolute z-50 mt-1 w-80 max-h-72 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl">
-        <div class="p-2 border-b border-gray-200 dark:border-gray-700">
-          <input id="tpl-picker-search" type="text" placeholder="Rechercher..." class="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-        </div>
-        <div id="tpl-picker-list" class="p-1">
-          ${serviceEntries.map(([serviceId, fields]) => `
-            <div class="tpl-picker-group" data-service="${serviceId}">
-              <div class="px-2 py-1 text-xs font-semibold text-indigo-400 uppercase tracking-wide">${esc(services[serviceId]?.label || serviceId)}</div>
-              ${[...fields].map(f => `
-                <button data-pick-ref="${serviceId}.${f}" class="w-full text-left px-3 py-1.5 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition font-mono">
-                  \${${serviceId}.${f}}
-                </button>
-              `).join('')}
-              ${fields.size === 0 ? '<div class="px-3 py-1 text-xs text-gray-500 italic">Aucun champ defini</div>' : ''}
-            </div>
-          `).join('')}
-          <div class="border-t border-gray-200 dark:border-gray-700 mt-1 pt-1">
-            <div class="px-2 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Variables magiques</div>
-            <button data-pick-ref="_ENV_NAME" class="w-full text-left px-3 py-1.5 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition font-mono">\${_ENV_NAME}</button>
+    <div id="tpl-picker-dropdown" class="hidden absolute z-50 mt-1 w-80 max-h-72 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl">
+      <div class="p-2 border-b border-gray-200 dark:border-gray-700">
+        <input id="tpl-picker-search" type="text" placeholder="Rechercher..." class="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+      </div>
+      <div id="tpl-picker-list" class="p-1">
+        ${serviceEntries.map(([serviceId, fields]) => `
+          <div class="tpl-picker-group" data-service="${serviceId}">
+            <div class="px-2 py-1 text-xs font-semibold text-indigo-400 uppercase tracking-wide">${esc(services[serviceId]?.label || serviceId)}</div>
+            ${[...fields].map(f => `
+              <button data-pick-ref="${serviceId}.${f}" class="w-full text-left px-3 py-1.5 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition font-mono">
+                \${${serviceId}.${f}}
+              </button>
+            `).join('')}
+            ${fields.size === 0 ? '<div class="px-3 py-1 text-xs text-gray-500 italic">Aucun champ defini</div>' : ''}
           </div>
-          <div class="border-t border-gray-200 dark:border-gray-700 mt-1 pt-1 p-2">
-            <div class="px-0 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Valeur libre</div>
-            <div class="flex gap-1">
-              <input id="tpl-free-value" type="text" placeholder="Saisir une valeur..." class="flex-1 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-              ${renderButton('OK', { id: 'tpl-free-value-ok', variant: 'success', cls: '!px-2 !py-1 !text-xs' })}
-            </div>
+        `).join('')}
+        <div class="border-t border-gray-200 dark:border-gray-700 mt-1 pt-1">
+          <div class="px-2 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Variables magiques</div>
+          <button data-pick-ref="_ENV_NAME" class="w-full text-left px-3 py-1.5 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition font-mono">\${_ENV_NAME}</button>
+        </div>
+        <div class="border-t border-gray-200 dark:border-gray-700 mt-1 pt-1 p-2">
+          <div class="px-0 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Valeur libre</div>
+          <div class="flex gap-1">
+            <input id="tpl-free-value" type="text" placeholder="Saisir une valeur..." class="flex-1 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+            ${renderButton('OK', { id: 'tpl-free-value-ok', variant: 'success', cls: '!px-2 !py-1 !text-xs' })}
           </div>
         </div>
       </div>
-      <input id="tpl-value" type="hidden" />
     </div>`;
 }
 
@@ -116,20 +111,19 @@ export function renderTemplates(render) {
             ${entries.length > 0 ? renderButton('Vider', { id: 'btn-clear-tpl', variant: 'danger' }) : ''}
           </div>
         </div>
-        <div id="tpl-entry-form" class="hidden mb-3 flex gap-2 items-start">
-          <input id="tpl-key" type="text" placeholder="ENV_VAR_NAME" class="w-48 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-          ${renderValuePicker()}
-          ${renderButton('OK', { id: 'btn-save-tpl-entry', variant: 'success', cls: 'shrink-0 !px-2 !py-1 !text-xs' })}
+        <div id="tpl-entry-list" class="space-y-1">
+          ${entries.length === 0
+            ? '<p class="text-gray-400 text-xs">Aucune entree.</p>'
+            : entries.map(([key, val]) => `
+              <div class="group flex items-center gap-3 text-sm py-1 font-mono cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 -mx-2 px-2 rounded transition" data-edit-tpl="${esc(key)}">
+                <span class="w-48 text-gray-300 shrink-0 pointer-events-none">${esc(key)}</span>
+                <span class="flex-1 ${val ? 'text-gray-500' : 'text-gray-600 italic'} pointer-events-none">${val ? esc(val) : 'Non defini'}</span>
+                ${renderDeleteButton('data-delete-tpl', key)}
+              </div>`).join('')
+          }
         </div>
-        ${entries.length === 0
-          ? '<p class="text-gray-400 text-xs">Aucune entree.</p>'
-          : `<div class="space-y-1">${entries.map(([key, val]) => `
-            <div class="group flex items-center gap-3 text-sm py-1 font-mono cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 -mx-2 px-2 rounded transition" data-edit-tpl="${esc(key)}">
-              <span class="w-48 text-gray-300 shrink-0 pointer-events-none">${esc(key)}</span>
-              <span class="flex-1 ${val ? 'text-gray-500' : 'text-gray-600 italic'} pointer-events-none">${val ? esc(val) : 'Non défini'}</span>
-              ${renderDeleteButton('data-delete-tpl', key)}
-            </div>`).join('')}</div>`
-        }
+        <!-- Shared picker dropdown -->
+        <div class="relative">${renderValuePickerDropdown()}</div>
       </div>`;
   }
 
@@ -149,11 +143,90 @@ export function renderTemplates(render) {
     </div>`;
 }
 
+function startTplForm(container, render, { key, value } = {}) {
+  const isCreate = !key;
+
+  const pickerBtnHtml = `<button type="button" data-tpl-picker-btn class="flex-1 px-3 py-1 rounded-lg border border-indigo-500 bg-white dark:bg-gray-800 text-sm font-mono text-left truncate focus:ring-2 focus:ring-indigo-500 focus:outline-none ${value ? 'text-white' : 'text-gray-400'}">
+    ${value ? esc(value) : 'Choisir une valeur...'}
+  </button>`;
+
+  startInlineEdit(container, {
+    rows: [
+      [{ name: 'key', value: key || '', placeholder: 'ENV_VAR_NAME', cls: 'flex-1 font-mono' }],
+      [{ html: pickerBtnHtml }, { html: '<input type="hidden" name="value" value="' + esc(value || '') + '" />' }],
+    ],
+    onSave: async (values) => {
+      const k = values.key.trim();
+      const v = values.value.trim();
+      if (!k || !v || !selectedEnv) return;
+      if (!isCreate && k !== key) {
+        await vault.deleteTemplateEntry(selectedEnv, key);
+      }
+      await vault.setTemplateEntry(selectedEnv, k, v);
+      render();
+    },
+    onCancel: render,
+    onReady: (el) => {
+      const pickerBtn = el.querySelector('[data-tpl-picker-btn]');
+      const hiddenInput = el.querySelector('input[name="value"]');
+      const dropdown = document.getElementById('tpl-picker-dropdown');
+      const search = document.getElementById('tpl-picker-search');
+
+      if (pickerBtn && dropdown) {
+        pickerBtn.onclick = (e) => {
+          e.stopPropagation();
+          dropdown.classList.toggle('hidden');
+          if (!dropdown.classList.contains('hidden')) {
+            // Position dropdown near the button
+            const rect = pickerBtn.getBoundingClientRect();
+            dropdown.style.position = 'fixed';
+            dropdown.style.left = rect.left + 'px';
+            dropdown.style.top = (rect.bottom + 4) + 'px';
+            if (search) { search.value = ''; filterPickerList(''); search.focus(); }
+          }
+        };
+
+        const pickValue = (val) => {
+          hiddenInput.value = val;
+          pickerBtn.textContent = val;
+          pickerBtn.classList.remove('text-gray-400');
+          pickerBtn.classList.add('text-white');
+          dropdown.classList.add('hidden');
+        };
+
+        document.querySelectorAll('[data-pick-ref]').forEach(btn => {
+          btn.onclick = (e) => {
+            e.stopPropagation();
+            pickValue(`\${${btn.dataset.pickRef}}`);
+          };
+        });
+
+        document.getElementById('tpl-free-value-ok')?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const val = document.getElementById('tpl-free-value').value.trim();
+          if (val) pickValue(val);
+        });
+
+        if (search) search.addEventListener('input', (e) => filterPickerList(e.target.value));
+
+        // Close on outside click
+        const closeHandler = (e) => {
+          if (dropdown && !dropdown.contains(e.target) && e.target !== pickerBtn) {
+            dropdown.classList.add('hidden');
+          }
+        };
+        document.addEventListener('click', closeHandler);
+      }
+    },
+  });
+}
+
 export function bindTemplates(render) {
   document.getElementById('tpl-env')?.addEventListener('change', (e) => {
     setSelectedEnv(e.target.value || null);
     render();
   });
+
   document.getElementById('btn-import-env')?.addEventListener('click', async () => {
     try {
       const text = await importEnvFile();
@@ -173,90 +246,27 @@ export function bindTemplates(render) {
       console.error('Import .env failed:', e);
     }
   });
+
   document.getElementById('btn-clear-tpl')?.addEventListener('click', async () => {
     if (selectedEnv && confirm('Vider tout le template ?')) {
       await vault.clearTemplate(selectedEnv);
       render();
     }
   });
+
   document.getElementById('btn-add-tpl-entry')?.addEventListener('click', () => {
-    document.getElementById('tpl-entry-form').classList.toggle('hidden');
-    document.getElementById('tpl-key').focus();
+    const list = document.getElementById('tpl-entry-list');
+    const row = document.createElement('div');
+    row.className = 'group flex items-center justify-between p-2 -mx-2 rounded-lg border border-indigo-500/50 transition';
+    list.prepend(row);
+    startTplForm(row, render);
   });
 
-  // Value picker
-  const pickerBtn = document.getElementById('tpl-value-btn');
-  const pickerDropdown = document.getElementById('tpl-value-dropdown');
-  const pickerSearch = document.getElementById('tpl-picker-search');
-  const hiddenValue = document.getElementById('tpl-value');
-
-  if (pickerBtn) {
-    pickerBtn.onclick = () => {
-      pickerDropdown.classList.toggle('hidden');
-      if (!pickerDropdown.classList.contains('hidden')) {
-        pickerSearch.value = '';
-        filterPickerList('');
-        pickerSearch.focus();
-      }
-    };
-    document.addEventListener('click', (e) => {
-      if (pickerDropdown && !pickerDropdown.contains(e.target) && e.target !== pickerBtn) {
-        pickerDropdown.classList.add('hidden');
-      }
-    });
-    pickerSearch?.addEventListener('input', (e) => filterPickerList(e.target.value));
-    document.querySelectorAll('[data-pick-ref]').forEach(btn => {
-      btn.onclick = () => {
-        const ref = btn.dataset.pickRef;
-        const val = `\${${ref}}`;
-        hiddenValue.value = val;
-        pickerBtn.textContent = val;
-        pickerBtn.classList.remove('text-gray-400');
-        pickerBtn.classList.add('text-white');
-        pickerDropdown.classList.add('hidden');
-      };
-    });
-    document.getElementById('tpl-free-value-ok')?.addEventListener('click', () => {
-      const val = document.getElementById('tpl-free-value').value.trim();
-      if (val) {
-        hiddenValue.value = val;
-        pickerBtn.textContent = val;
-        pickerBtn.classList.remove('text-gray-400');
-        pickerBtn.classList.add('text-white');
-        pickerDropdown.classList.add('hidden');
-      }
-    });
-  }
-
-  document.getElementById('btn-save-tpl-entry')?.addEventListener('click', async () => {
-    const keyInput = document.getElementById('tpl-key');
-    const key = keyInput.value.trim();
-    const value = document.getElementById('tpl-value').value.trim();
-    if (key && value && selectedEnv) {
-      await vault.setTemplateEntry(selectedEnv, key, value);
-      keyInput.readOnly = false;
-      keyInput.classList.remove('opacity-50');
-      render();
-    }
-  });
-
-  // Edit template entry value — whole row clickable
+  // Edit template entry — same form
   bindEditableRows('[data-edit-tpl]', (row) => {
     const key = row.dataset.editTpl;
-    const form = document.getElementById('tpl-entry-form');
-    form.classList.remove('hidden');
-    const keyInput = document.getElementById('tpl-key');
-    keyInput.value = key;
-    keyInput.readOnly = true;
-    keyInput.classList.add('opacity-50');
-    const pickerBtnEl = document.getElementById('tpl-value-btn');
-    if (pickerBtnEl) {
-      pickerBtnEl.textContent = 'Choisir une valeur...';
-      pickerBtnEl.classList.add('text-gray-400');
-      pickerBtnEl.classList.remove('text-white');
-    }
-    document.getElementById('tpl-value').value = '';
-    form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    const tpl = vault.getTemplate(selectedEnv);
+    startTplForm(row, render, { key, value: tpl[key] || '' });
   }, ['[data-delete-tpl]']);
 
   bindDeleteButtons('[data-delete-tpl]', async (btn) => {

@@ -24,6 +24,15 @@ const variants = {
  * @param {string} [opts.title] - Tooltip
  * @param {string} [opts.type] - Button type attribute
  */
+const spinner = `<svg class="animate-spin h-4 w-4 inline-block" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>`;
+
+export function setButtonLoading(btn, loading, label) {
+  btn.disabled = loading;
+  btn.innerHTML = loading ? spinner : label;
+  btn.classList.toggle('opacity-60', loading);
+  btn.classList.toggle('pointer-events-none', loading);
+}
+
 export function renderButton(label, opts = {}) {
   const { variant = 'primary', id, attrs = '', cls = '', title, type } = opts;
   const classes = `${variants[variant] || variants.primary} ${cls}`.trim();

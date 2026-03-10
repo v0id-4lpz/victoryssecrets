@@ -1,22 +1,14 @@
-// crypto.js — PBKDF2 key derivation + AES-256-GCM encrypt/decrypt
+// crypto.js — Argon2id key derivation + AES-256-GCM encrypt/decrypt
 
 const SALT_LENGTH = 16;
 const IV_LENGTH = 12;
-const PBKDF2_ITERATIONS = 600000;
 
-export async function deriveKey(password, salt) {
-  const encoder = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
+async function deriveKey(password, salt) {
+  const rawKey = await window.electronAPI.argon2id(password, salt);
+  return crypto.subtle.importKey(
     'raw',
-    encoder.encode(password),
-    'PBKDF2',
-    false,
-    ['deriveKey']
-  );
-  return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
-    keyMaterial,
-    { name: 'AES-GCM', length: 256 },
+    new Uint8Array(rawKey),
+    { name: 'AES-GCM' },
     false,
     ['encrypt', 'decrypt']
   );

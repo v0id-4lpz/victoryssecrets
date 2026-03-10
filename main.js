@@ -69,6 +69,20 @@ ipcMain.handle('file:open-path', async (_event, filePath) => {
   return { filePath, buffer: data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) };
 });
 
+ipcMain.handle('crypto:argon2id', async (_event, { password, salt }) => {
+  const { argon2id } = require('hash-wasm');
+  const hash = await argon2id({
+    password,
+    salt: new Uint8Array(salt),
+    parallelism: 4,
+    iterations: 3,
+    memorySize: 262144, // 256 MB
+    hashLength: 32,
+    outputType: 'binary',
+  });
+  return Array.from(hash);
+});
+
 ipcMain.handle('file:import-env', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
     title: 'Importer un fichier .env',
