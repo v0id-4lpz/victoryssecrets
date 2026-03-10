@@ -2,7 +2,7 @@
 
 import * as vault from '../vault.js';
 import { generatePassword, generateBase64, generateHex, generateUUID } from '../generator.js';
-import { esc, selectedEnv, secretLevelScope, setSelectedEnv, setSecretLevelScope, INPUT_CLS, renderEnvOptions } from './helpers.js';
+import { esc, selectedEnv, setSelectedEnv, INPUT_CLS } from './helpers.js';
 import { renderButton } from './components/button.js';
 import { icons } from './components/icon.js';
 import { renderDeleteButton, bindDeleteButtons } from './components/delete-button.js';
@@ -11,6 +11,7 @@ import { renderEmptyState } from './components/empty-state.js';
 import { renderAddButton } from './components/section-header.js';
 import { startInlineEdit } from './components/inline-edit.js';
 import { showToast } from './components/toast.js';
+import { renderEnvPills, bindEnvPills } from './components/env-pills.js';
 
 const CLIPBOARD_CLEAR_DELAY = 10_000;
 
@@ -37,7 +38,7 @@ export function clearSecretStore() {
 let generatorTargetInput = null;
 
 function getCurrentLevel() {
-  if (secretLevelScope === 'env' && selectedEnv) return { scope: 'env', envId: selectedEnv };
+  if (selectedEnv) return { scope: 'env', envId: selectedEnv };
   return { scope: 'global' };
 }
 
@@ -68,24 +69,7 @@ export function renderSecrets(render) {
         ${renderAddButton('btn-add-secret')}
       </div>
 
-      <!-- Level selector -->
-      <div class="flex flex-wrap gap-3 mb-6 items-end">
-        <div>
-          <label class="block text-xs text-gray-500 mb-1">Level</label>
-          <select id="secret-scope" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-            <option value="global" ${secretLevelScope === 'global' ? 'selected' : ''}>Global</option>
-            <option value="env" ${secretLevelScope === 'env' ? 'selected' : ''}>Environment</option>
-          </select>
-        </div>
-        ${secretLevelScope === 'env' ? `
-        <div>
-          <label class="block text-xs text-gray-500 mb-1">Environment</label>
-          <select id="secret-env" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-            <option value="">--</option>
-            ${renderEnvOptions(envs, selectedEnv)}
-          </select>
-        </div>` : ''}
-      </div>
+      ${renderEnvPills(envs, selectedEnv, { showGlobal: true, id: 'secret-env-pills' })}
 
       ${renderGeneratorModal()}
 
@@ -151,7 +135,6 @@ function startSecretForm(container, render, { serviceId, field, value, isSecret 
       if (!svcId || !newField) return;
 
       const level = getCurrentLevel();
-      if (secretLevelScope === 'env' && !selectedEnv) return;
 
       if (!isCreate && (svcId !== serviceId || newField !== field)) {
         await vault.moveSecret(level, serviceId, field, svcId, newField);
@@ -299,14 +282,10 @@ function bindGenerator() {
 }
 
 export function bindSecrets(render) {
-  document.getElementById('secret-scope').onchange = (e) => {
-    setSecretLevelScope(e.target.value);
+  bindEnvPills((envId) => {
+    setSelectedEnv(envId);
     render();
-  };
-  document.getElementById('secret-env')?.addEventListener('change', (e) => {
-    setSelectedEnv(e.target.value || null);
-    render();
-  });
+  }, 'secret-env-pills');
 
   // Add secret
   document.getElementById('btn-add-secret').onclick = () => {

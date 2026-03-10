@@ -3,12 +3,10 @@
 // --- Shared State ---
 export let currentSection = 'services';
 export let selectedEnv = null;
-export let secretLevelScope = 'global';
 export let updateInfo = null;
 
 export function setCurrentSection(v) { currentSection = v; }
 export function setSelectedEnv(v) { selectedEnv = v; }
-export function setSecretLevelScope(v) { secretLevelScope = v; }
 export function setUpdateInfo(v) { updateInfo = v; }
 
 // --- HTML escape ---
@@ -20,11 +18,6 @@ export function esc(str) {
 
 // --- Shared CSS classes ---
 export const INPUT_CLS = 'px-3 py-1 rounded-lg border border-indigo-500 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none';
-
-// --- Shared UI helpers ---
-export function renderEnvOptions(envs, selected) {
-  return [...envs].sort((a, b) => a.localeCompare(b)).map(e => `<option value="${e}" ${e === selected ? 'selected' : ''}>${esc(e)}</option>`).join('');
-}
 
 // --- Path formatting ---
 export function fileName(filePath) {
