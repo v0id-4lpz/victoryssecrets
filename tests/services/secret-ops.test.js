@@ -8,7 +8,7 @@ import {
 function makeVault() {
   const data = createEmpty();
   data.services = { pg: { label: 'PostgreSQL', comment: '' }, redis: { label: 'Redis', comment: '' } };
-  data.environments = ['prod'];
+  data.environments = { prod: { comment: '' } };
   data.secrets = {
     pg: {
       url: { secret: true, values: { _global: 'postgres://localhost', prod: 'postgres://prod' } },

@@ -5,7 +5,7 @@ import { resolveSecrets, generateEnv } from '../../js/services/env-generator.js'
 function makeVault() {
   const data = createEmpty();
   data.services = { pg: { label: 'PostgreSQL', comment: '' }, redis: { label: 'Redis', comment: '' } };
-  data.environments = ['prod', 'dev'];
+  data.environments = { prod: { comment: '' }, dev: { comment: '' } };
   data.secrets = {
     pg: {
       url: { secret: true, values: { _global: 'postgres://global', prod: 'postgres://prod' } },

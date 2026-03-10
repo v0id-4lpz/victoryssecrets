@@ -6,7 +6,7 @@ const vaultData = {
     pg: { label: 'PostgreSQL', comment: 'Main database' },
     redis: { label: 'Redis', comment: '' },
   },
-  environments: ['prod', 'dev'],
+  environments: { prod: { comment: 'Production' }, dev: { comment: '' } },
   secrets: {
     pg: {
       url: { secret: true, values: { _global: 'postgres://...' } },
@@ -62,7 +62,7 @@ describe('buildSearchIndex', () => {
   });
 
   it('handles empty vault data', () => {
-    const idx = buildSearchIndex({ services: {}, environments: [], secrets: {}, templates: { main: {} } });
+    const idx = buildSearchIndex({ services: {}, environments: {}, secrets: {}, templates: { main: {} } });
     expect(idx).toEqual([]);
   });
 });

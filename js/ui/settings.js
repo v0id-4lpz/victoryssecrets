@@ -12,10 +12,9 @@ export function renderSettings(render) {
   const settings = vault.getSettings();
   const data = vault.getData();
   const serviceCount = Object.keys(data.services).length;
-  const envCount = data.environments.length;
-  const secretCount = Object.values(data.secrets.global).reduce((n, svc) => n + Object.keys(svc).length, 0)
-    + Object.values(data.secrets.envs).reduce((n, env) => n + Object.values(env).reduce((m, svc) => m + Object.keys(svc).length, 0), 0);
-  const templateCount = Object.keys(data.templates).length;
+  const envCount = Object.keys(data.environments).length;
+  const secretCount = Object.values(data.secrets || {}).reduce((n, fields) => n + Object.keys(fields).length, 0);
+  const templateCount = Object.keys(data.templates?.main || {}).length;
 
   return `
     <div class="max-w-lg space-y-8">

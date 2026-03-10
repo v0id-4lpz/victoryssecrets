@@ -55,7 +55,7 @@ function renderEnvCoveragePills(entry, envs, key) {
 
 export function renderSecrets(render) {
   const data = vault.getData();
-  const envs = [...(data.environments || [])].sort((a, b) => a.localeCompare(b));
+  const envs = Object.keys(data.environments || {}).sort((a, b) => a.localeCompare(b));
   const secrets = vault.getAllSecrets();
   const secretEntries = Object.entries(secrets).sort(([a], [b]) => {
     const labelA = data.services[a]?.label || a;
@@ -111,7 +111,7 @@ export function renderSecrets(render) {
 function startSecretForm(container, render, { serviceId, field, entry } = {}) {
   const isCreate = !field;
   const data = vault.getData();
-  const envs = [...(data.environments || [])].sort((a, b) => a.localeCompare(b));
+  const envs = Object.keys(data.environments || {}).sort((a, b) => a.localeCompare(b));
   const services = Object.entries(data.services || {}).sort(([, a], [, b]) => a.label.localeCompare(b.label));
 
   const serviceSelectHtml = `<select name="serviceId" class="${INPUT_CLS} flex-1">

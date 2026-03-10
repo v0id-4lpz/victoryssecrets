@@ -13,8 +13,7 @@ export function createEmpty() {
     version: CURRENT_VERSION,
     settings: { ...DEFAULT_SETTINGS },
     services: {},
-    environments: [],
-    environmentMeta: {},
+    environments: {},
     secrets: {},
     templates: { main: {} },
   };
@@ -22,8 +21,7 @@ export function createEmpty() {
 
 export function ensureStructure(data) {
   if (!data.services) data.services = {};
-  if (!data.environments) data.environments = [];
-  if (!data.environmentMeta) data.environmentMeta = {};
+  if (!data.environments || Array.isArray(data.environments)) data.environments = {};
   if (!data.secrets) data.secrets = {};
   if (!data.templates) data.templates = { main: {} };
   if (!data.templates.main) data.templates.main = {};

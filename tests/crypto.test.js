@@ -119,7 +119,7 @@ describe('crypto', () => {
       const vaultData = {
         version: 2,
         services: { pg: { label: 'PostgreSQL', comment: 'Main DB' } },
-        environments: ['prod', 'dev'],
+        environments: { prod: { comment: '' }, dev: { comment: '' } },
         secrets: {
           pg: {
             url: { secret: true, values: { _global: 'postgres://localhost' } },

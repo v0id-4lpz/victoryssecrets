@@ -13,9 +13,9 @@ export function buildSearchIndex(data, getEnvComment) {
     results.push({ type: 'service', id, label: s.label, comment: s.comment || '', section: 'services' });
   }
 
-  for (const env of data.environments || []) {
-    const comment = getEnvComment ? getEnvComment(env) : '';
-    results.push({ type: 'env', id: env, label: env, comment, section: 'environments' });
+  for (const [envId, meta] of Object.entries(data.environments || {})) {
+    const comment = getEnvComment ? getEnvComment(envId) : (meta?.comment || '');
+    results.push({ type: 'env', id: envId, label: envId, comment, section: 'environments' });
   }
 
   for (const [serviceId, fields] of Object.entries(data.secrets || {})) {

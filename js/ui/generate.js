@@ -8,7 +8,7 @@ import { renderEnvPills, bindEnvPills } from './components/env-pills.js';
 
 export function renderGenerate(render) {
   const data = vault.getData();
-  const envs = data.environments || [];
+  const envs = Object.keys(data.environments || {});
   const tpl = vault.getTemplate();
   const hasTemplate = Object.keys(tpl).length > 0;
 
