@@ -106,10 +106,10 @@ export function renderTemplates(render) {
             ${!textMode ? `<input id="tpl-filter" type="text" placeholder="Filter keys..." class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none w-40" />` : ''}
           </div>
           <div class="flex items-center gap-3">
-            ${!textMode ? renderButton('+ Add', { id: 'btn-add-tpl-entry', variant: 'ghost' }) : ''}
-            ${renderButton('Import .env', { id: 'btn-import-env', variant: 'ghost' })}
+            ${!textMode ? renderButton('+ Add', { id: 'btn-add-tpl-entry', variant: 'link' }) : ''}
+            ${renderButton('Import .env', { id: 'btn-import-env', variant: 'link' })}
             <span class="text-gray-300 dark:text-gray-600">|</span>
-            ${renderButton(toggleLabel, { id: 'btn-toggle-text-mode', variant: 'ghost' })}
+            ${renderButton(toggleLabel, { id: 'btn-toggle-text-mode', variant: 'link' })}
             ${!textMode && entries.length > 0 ? `<span class="text-gray-300 dark:text-gray-600">|</span>${renderButton('Clear', { id: 'btn-clear-tpl', variant: 'danger' })}` : ''}
           </div>
         </div>

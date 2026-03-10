@@ -8,7 +8,7 @@ import { renderButton, setButtonLoading } from './components/button.js';
 import { renderDeleteButton } from './components/delete-button.js';
 import { icons } from './components/icon.js';
 import { MIN_PASSWORD_LENGTH, renderStrengthBar, updateStrengthBar } from './components/password-strength.js';
-import { fileName, dirName, esc, updateInfo } from './helpers.js';
+import { fileName, dirName, shortenPath, esc, updateInfo } from './helpers.js';
 
 let pendingAction = null; // 'create' | 'open'
 let pendingBuffer = null;
@@ -45,12 +45,13 @@ export function renderWelcome() {
         <div class="mt-10 flex justify-center">
           ${renderButton(icons.theme(), { id: 'btn-theme-welcome', variant: 'icon', title: 'Toggle theme' })}
         </div>
-        <div class="mt-10">
+        <div id="welcome-actions" class="mt-10">
           ${renderButton('Create a new vault', { id: 'btn-create', variant: 'primary', cls: 'w-full flex justify-center py-3 !text-sm font-medium' })}
           <div class="mt-4">${renderButton('Open an existing vault', { id: 'btn-open', variant: 'secondary', cls: 'w-full flex justify-center py-3 !text-sm font-medium' })}</div>
         </div>
-        ${renderRecentsList()}
+        <div id="welcome-recents">${renderRecentsList()}</div>
         <div id="password-form" class="hidden mt-14">
+          <p id="vault-path" class="text-xs text-gray-400 truncate text-center mb-4"></p>
           <input id="password-input" type="password" placeholder="Master password" class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
           <div id="password-strength" class="hidden mt-4">
             ${renderStrengthBar('strength')}
@@ -58,6 +59,7 @@ export function renderWelcome() {
           <input id="password-confirm" type="password" placeholder="Confirm password" class="hidden w-full mt-4 px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
           <p id="password-error" class="text-red-500 text-sm hidden mt-4"></p>
           <div class="mt-4">${renderButton('Unlock', { id: 'btn-submit-password', variant: 'primary', cls: 'w-full py-3 !text-sm font-medium' })}</div>
+          <div class="mt-3">${renderButton('Cancel', { id: 'btn-cancel-password', variant: 'ghost', cls: 'w-full flex justify-center py-3 !text-sm font-medium' })}</div>
         </div>
       </div>
     </div>`;
@@ -65,6 +67,8 @@ export function renderWelcome() {
 
 function showPasswordForm(action, label) {
   pendingAction = action;
+  document.getElementById('welcome-actions').classList.add('hidden');
+  document.getElementById('welcome-recents').classList.add('hidden');
   const form = document.getElementById('password-form');
   form.classList.remove('hidden');
   const isCreate = action === 'create';
@@ -74,6 +78,7 @@ function showPasswordForm(action, label) {
   document.getElementById('password-input').value = '';
   document.getElementById('password-confirm').value = '';
   document.getElementById('password-error').classList.add('hidden');
+  document.getElementById('vault-path').textContent = shortenPath(storage.getFilePath());
   if (isCreate) updateStrengthBar('', 'strength');
   document.getElementById('password-input').focus();
 }
@@ -177,6 +182,7 @@ export function bindWelcome(render) {
   };
 
   document.getElementById('btn-submit-password').onclick = submitPassword;
+  document.getElementById('btn-cancel-password').onclick = () => { pendingAction = null; pendingBuffer = null; render(); };
   document.getElementById('password-input').onkeydown = (e) => { if (e.key === 'Enter') submitPassword(); };
   document.getElementById('password-confirm').onkeydown = (e) => { if (e.key === 'Enter') submitPassword(); };
 }
