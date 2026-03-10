@@ -3,6 +3,7 @@ name: Build
 on:
   push:
     branches: [master]
+  workflow_dispatch:
 
 jobs:
   test:
@@ -38,7 +39,7 @@ jobs:
 
   build:
     needs: [test, check-version]
-    if: needs.check-version.outputs.changed == 'true'
+    if: needs.check-version.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
@@ -58,7 +59,7 @@ jobs:
 
   release:
     needs: [check-version, build]
-    if: needs.check-version.outputs.changed == 'true'
+    if: needs.check-version.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: write
