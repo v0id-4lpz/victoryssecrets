@@ -13,7 +13,7 @@ export function renderServices(render) {
   const data = vault.getData();
   const services = Object.entries(data.services || {});
   return `
-    <div class="max-w-2xl">
+    <div class="max-w-3xl">
       ${renderSectionHeader('Services', renderAddButton('btn-add-service'))}
       <div id="service-form" class="hidden mb-4 flex gap-2">
         <input id="service-label" type="text" placeholder="Label (ex: PostgreSQL)" class="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />

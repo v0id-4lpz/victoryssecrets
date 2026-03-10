@@ -7,6 +7,7 @@ import { toggleTheme } from './theme.js';
 import { renderButton } from './components/button.js';
 import { renderDeleteButton } from './components/delete-button.js';
 import { icons } from './components/icon.js';
+import { MIN_PASSWORD_LENGTH, renderStrengthBar, updateStrengthBar } from './components/password-strength.js';
 
 let pendingAction = null; // 'create' | 'open'
 let pendingBuffer = null;
@@ -69,6 +70,9 @@ export function renderWelcome() {
         ${renderRecentsList()}
         <div id="password-form" class="hidden space-y-4">
           <input id="password-input" type="password" placeholder="Mot de passe maitre" class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+          <div id="password-strength" class="hidden">
+            ${renderStrengthBar('strength')}
+          </div>
           <input id="password-confirm" type="password" placeholder="Confirmer le mot de passe" class="hidden w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
           <p id="password-error" class="text-red-500 text-sm hidden"></p>
           ${renderButton('Deverrouiller', { id: 'btn-submit-password', variant: 'primary', cls: 'w-full py-3 !text-sm font-medium' })}
@@ -84,11 +88,14 @@ function showPasswordForm(action, label) {
   pendingAction = action;
   const form = document.getElementById('password-form');
   form.classList.remove('hidden');
-  document.getElementById('password-confirm').classList.toggle('hidden', action !== 'create');
+  const isCreate = action === 'create';
+  document.getElementById('password-confirm').classList.toggle('hidden', !isCreate);
+  document.getElementById('password-strength').classList.toggle('hidden', !isCreate);
   document.getElementById('btn-submit-password').textContent = label;
   document.getElementById('password-input').value = '';
   document.getElementById('password-confirm').value = '';
   document.getElementById('password-error').classList.add('hidden');
+  if (isCreate) updateStrengthBar('', 'strength');
   document.getElementById('password-input').focus();
 }
 
@@ -140,6 +147,11 @@ export function bindWelcome(render) {
     };
   });
 
+  // Strength bar update on typing
+  document.getElementById('password-input').addEventListener('input', (e) => {
+    if (pendingAction === 'create') updateStrengthBar(e.target.value, 'strength');
+  });
+
   const submitPassword = async () => {
     const password = document.getElementById('password-input').value;
     const errorEl = document.getElementById('password-error');
@@ -153,6 +165,11 @@ export function bindWelcome(render) {
 
     try {
       if (pendingAction === 'create') {
+        if (password.length < MIN_PASSWORD_LENGTH) {
+          errorEl.textContent = `Le mot de passe doit contenir au moins ${MIN_PASSWORD_LENGTH} caracteres`;
+          errorEl.classList.remove('hidden');
+          return;
+        }
         const confirm = document.getElementById('password-confirm').value;
         if (password !== confirm) {
           errorEl.textContent = 'Les mots de passe ne correspondent pas';

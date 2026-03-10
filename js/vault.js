@@ -47,6 +47,12 @@ export async function persist() {
   await saveFile(encrypted);
 }
 
+export async function changePassword(currentPassword, newPassword) {
+  if (currentPassword !== masterPassword) throw new Error('Wrong password');
+  masterPassword = newPassword;
+  await persist();
+}
+
 export function lock() {
   vaultData = null;
   masterPassword = null;

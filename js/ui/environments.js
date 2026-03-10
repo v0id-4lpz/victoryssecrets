@@ -13,7 +13,7 @@ export function renderEnvironments(render) {
   const data = vault.getData();
   const envs = data.environments || [];
   return `
-    <div class="max-w-2xl">
+    <div class="max-w-3xl">
       ${renderSectionHeader('Environnements', renderAddButton('btn-add-env'))}
       <div id="env-form" class="hidden mb-4 flex gap-2">
         <input id="env-id" type="text" placeholder="ex: dev, staging, prod" class="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
