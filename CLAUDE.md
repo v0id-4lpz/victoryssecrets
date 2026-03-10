@@ -67,6 +67,6 @@ js/
 ## GIT
 
 - Jamais de Co-Authored-By
-- **Ne jamais push directement sur `master`** — toujours passer par une PR depuis `develop`
+- **Ne jamais push directement sur `master`** — toujours merge depuis `develop`
 - Branche de travail : `develop`
-- Merge vers `master` via PR uniquement (déclenche le build CI)
+- Merge vers `master` : `git checkout master && git merge develop && git push && git checkout develop`
