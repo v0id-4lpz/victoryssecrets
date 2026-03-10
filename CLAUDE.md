@@ -67,3 +67,6 @@ js/
 ## GIT
 
 - Jamais de Co-Authored-By
+- **Ne jamais push directement sur `master`** — toujours passer par une PR depuis `develop`
+- Branche de travail : `develop`
+- Merge vers `master` via PR uniquement (déclenche le build CI)
