@@ -39,16 +39,14 @@ export function buildSearchIndex(data, getEnvComment) {
     addSecrets('env', envId);
   }
 
-  for (const envId of Object.keys(data.templates || {})) {
-    for (const [key, val] of Object.entries(data.templates[envId])) {
-      results.push({
-        type: 'template',
-        id: `${envId}:${key}`,
-        label: `${key} = ${val}`,
-        comment: `env: ${envId}`,
-        section: 'templates',
-      });
-    }
+  for (const [key, val] of Object.entries(data.templates?.main || {})) {
+    results.push({
+      type: 'template',
+      id: key,
+      label: `${key} = ${val}`,
+      comment: '',
+      section: 'templates',
+    });
   }
 
   return results;

@@ -11,7 +11,6 @@ export function addEnvironment(data, envId, comment = '') {
   if (!data.environmentMeta[envId]) data.environmentMeta[envId] = {};
   data.environmentMeta[envId].comment = comment;
   if (!data.secrets.envs[envId]) data.secrets.envs[envId] = {};
-  if (!data.templates[envId]) data.templates[envId] = {};
   return data;
 }
 
@@ -22,10 +21,6 @@ export function renameEnvironment(data, oldId, newId) {
   if (data.secrets.envs[oldId]) {
     data.secrets.envs[newId] = data.secrets.envs[oldId];
     delete data.secrets.envs[oldId];
-  }
-  if (data.templates[oldId]) {
-    data.templates[newId] = data.templates[oldId];
-    delete data.templates[oldId];
   }
   if (data.environmentMeta?.[oldId]) {
     if (!data.environmentMeta) data.environmentMeta = {};
@@ -39,7 +34,6 @@ export function deleteEnvironment(data, envId) {
   const idx = data.environments.indexOf(envId);
   if (idx !== -1) data.environments.splice(idx, 1);
   delete data.secrets.envs[envId];
-  delete data.templates[envId];
   delete data.environmentMeta?.[envId];
   return data;
 }

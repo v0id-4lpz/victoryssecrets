@@ -23,7 +23,7 @@ function renderNavItem(section, label) {
   const cls = active
     ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
     : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800';
-  return `<button data-nav="${section}" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium ${cls} transition">${label}</button>`;
+  return `<button data-nav="${section}" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium cursor-pointer ${cls} transition">${label}</button>`;
 }
 
 function renderSection() {
@@ -72,7 +72,7 @@ const SEARCH_TYPE_COLORS = {
 function renderSearchResults(results) {
   if (results.length === 0) return '<p class="text-gray-400 text-xs px-3 py-4 text-center">No results</p>';
   return results.map(r => `
-    <button data-search-nav="${r.section}" class="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+    <button data-search-nav="${r.section}" class="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition">
       <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded ${SEARCH_TYPE_COLORS[r.type]}">${SEARCH_TYPE_LABELS[r.type]}</span>
       <span class="text-sm truncate flex-1">${esc(r.label)}</span>
       <span class="text-xs text-gray-400 truncate max-w-[120px]">${esc(r.comment)}</span>
@@ -153,8 +153,8 @@ function renderMain() {
           ${renderNavItem('environments', 'Environments')}
           ${renderNavItem('secrets', 'Secrets')}
           <div class="!mt-4 border-t border-gray-200 dark:border-gray-700 pt-3"></div>
-          ${renderNavItem('templates', 'Templates')}
-          ${renderNavItem('generate', 'Generate .env')}
+          ${renderNavItem('templates', '.env template')}
+          ${renderNavItem('generate', '.env generate')}
           <div class="!mt-4 border-t border-gray-200 dark:border-gray-700 pt-3">
             ${renderNavItem('settings', 'Settings')}
           </div>

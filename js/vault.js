@@ -171,33 +171,33 @@ export async function moveSecret(level, oldServiceId, oldField, newServiceId, ne
 
 // --- Templates ---
 
-export async function setTemplateEntry(envId, key, value) {
-  templateOps.setTemplateEntry(vaultData, envId, key, value);
+export async function setTemplateEntry(key, value) {
+  templateOps.setTemplateEntry(vaultData, key, value);
   await persist();
 }
 
-export async function deleteTemplateEntry(envId, key) {
-  templateOps.deleteTemplateEntry(vaultData, envId, key);
+export async function deleteTemplateEntry(key) {
+  templateOps.deleteTemplateEntry(vaultData, key);
   await persist();
 }
 
-export async function clearTemplate(envId) {
-  templateOps.clearTemplate(vaultData, envId);
+export async function clearTemplate() {
+  templateOps.clearTemplate(vaultData);
   await persist();
 }
 
-export async function replaceTemplate(envId, newTpl) {
-  templateOps.replaceTemplate(vaultData, envId, newTpl);
+export async function replaceTemplate(newTpl) {
+  templateOps.replaceTemplate(vaultData, newTpl);
   await persist();
 }
 
-export async function mergeTemplate(envId, incoming) {
-  templateOps.mergeTemplate(vaultData, envId, incoming);
+export async function mergeTemplate(incoming) {
+  templateOps.mergeTemplate(vaultData, incoming);
   await persist();
 }
 
-export function getTemplate(envId) {
-  return templateOps.getTemplate(vaultData, envId);
+export function getTemplate() {
+  return templateOps.getTemplate(vaultData);
 }
 
 // --- Settings ---

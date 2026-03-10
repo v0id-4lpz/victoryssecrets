@@ -1,25 +1,27 @@
 // template-ops.js — pure CRUD operations on templates + env file parsing + field tree
 
-export function setTemplateEntry(data, envId, key, value) {
-  if (!data.templates[envId]) data.templates[envId] = {};
-  data.templates[envId][key] = value;
+const TPL_KEY = 'main';
+
+export function setTemplateEntry(data, key, value) {
+  if (!data.templates[TPL_KEY]) data.templates[TPL_KEY] = {};
+  data.templates[TPL_KEY][key] = value;
   return data;
 }
 
-export function deleteTemplateEntry(data, envId, key) {
-  delete data.templates?.[envId]?.[key];
+export function deleteTemplateEntry(data, key) {
+  delete data.templates?.[TPL_KEY]?.[key];
   return data;
 }
 
-export function clearTemplate(data, envId) {
-  if (data.templates?.[envId]) {
-    data.templates[envId] = {};
+export function clearTemplate(data) {
+  if (data.templates?.[TPL_KEY]) {
+    data.templates[TPL_KEY] = {};
   }
   return data;
 }
 
-export function getTemplate(data, envId) {
-  return data.templates?.[envId] || {};
+export function getTemplate(data) {
+  return data.templates?.[TPL_KEY] || {};
 }
 
 export function serializeTemplate(tpl) {
@@ -39,16 +41,16 @@ export function parseTemplateText(text) {
   return result;
 }
 
-export function replaceTemplate(data, envId, newTpl) {
-  data.templates[envId] = newTpl;
+export function replaceTemplate(data, newTpl) {
+  data.templates[TPL_KEY] = newTpl;
   return data;
 }
 
-export function mergeTemplate(data, envId, incoming) {
-  if (!data.templates[envId]) data.templates[envId] = {};
+export function mergeTemplate(data, incoming) {
+  if (!data.templates[TPL_KEY]) data.templates[TPL_KEY] = {};
   for (const [key, val] of Object.entries(incoming)) {
-    if (!(key in data.templates[envId])) {
-      data.templates[envId][key] = val;
+    if (!(key in data.templates[TPL_KEY])) {
+      data.templates[TPL_KEY][key] = val;
     }
   }
   return data;

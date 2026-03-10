@@ -12,7 +12,7 @@ function makeVault() {
   data.environments = ['prod'];
   data.secrets.global = { pg: { url: { value: 'x', secret: true }, password: { value: 'y', secret: true } } };
   data.secrets.envs = { prod: { pg: { host: { value: 'db.prod', secret: false } } } };
-  data.templates = { prod: { DATABASE_URL: '${pg.url}' } };
+  data.templates = { main: { DATABASE_URL: '${pg.url}' } };
   return data;
 }
 
@@ -20,54 +20,46 @@ describe('template-ops CRUD', () => {
   describe('setTemplateEntry', () => {
     it('sets a new entry', () => {
       const data = makeVault();
-      setTemplateEntry(data, 'prod', 'REDIS', '${redis.host}');
-      expect(data.templates.prod.REDIS).toBe('${redis.host}');
-    });
-    it('creates env bucket if missing', () => {
-      const data = makeVault();
-      setTemplateEntry(data, 'dev', 'KEY', 'value');
-      expect(data.templates.dev.KEY).toBe('value');
+      setTemplateEntry(data, 'REDIS', '${redis.host}');
+      expect(data.templates.main.REDIS).toBe('${redis.host}');
     });
     it('overwrites existing entry', () => {
       const data = makeVault();
-      setTemplateEntry(data, 'prod', 'DATABASE_URL', '${pg.connection}');
-      expect(data.templates.prod.DATABASE_URL).toBe('${pg.connection}');
+      setTemplateEntry(data, 'DATABASE_URL', '${pg.connection}');
+      expect(data.templates.main.DATABASE_URL).toBe('${pg.connection}');
     });
   });
 
   describe('deleteTemplateEntry', () => {
     it('removes an entry', () => {
       const data = makeVault();
-      deleteTemplateEntry(data, 'prod', 'DATABASE_URL');
-      expect(data.templates.prod.DATABASE_URL).toBeUndefined();
+      deleteTemplateEntry(data, 'DATABASE_URL');
+      expect(data.templates.main.DATABASE_URL).toBeUndefined();
     });
     it('does nothing for missing key', () => {
       const data = makeVault();
-      deleteTemplateEntry(data, 'prod', 'NONEXISTENT');
-      expect(Object.keys(data.templates.prod)).toHaveLength(1);
+      deleteTemplateEntry(data, 'NONEXISTENT');
+      expect(Object.keys(data.templates.main)).toHaveLength(1);
     });
   });
 
   describe('clearTemplate', () => {
     it('empties the template', () => {
       const data = makeVault();
-      clearTemplate(data, 'prod');
-      expect(data.templates.prod).toEqual({});
-    });
-    it('does nothing for missing env', () => {
-      const data = makeVault();
-      clearTemplate(data, 'staging');
-      expect(data.templates.staging).toBeUndefined();
+      clearTemplate(data);
+      expect(data.templates.main).toEqual({});
     });
   });
 
   describe('getTemplate', () => {
     it('returns the template object', () => {
       const data = makeVault();
-      expect(getTemplate(data, 'prod')).toEqual({ DATABASE_URL: '${pg.url}' });
+      expect(getTemplate(data)).toEqual({ DATABASE_URL: '${pg.url}' });
     });
-    it('returns empty object for missing env', () => {
-      expect(getTemplate(makeVault(), 'staging')).toEqual({});
+    it('returns empty object for missing template', () => {
+      const data = createEmpty();
+      data.templates = {};
+      expect(getTemplate(data)).toEqual({});
     });
   });
 });
@@ -129,27 +121,17 @@ describe('serializeTemplate', () => {
 describe('replaceTemplate', () => {
   it('replaces the entire template', () => {
     const data = makeVault();
-    replaceTemplate(data, 'prod', { NEW_KEY: 'new_val' });
-    expect(data.templates.prod).toEqual({ NEW_KEY: 'new_val' });
-  });
-  it('creates env bucket if missing', () => {
-    const data = makeVault();
-    replaceTemplate(data, 'dev', { A: '1' });
-    expect(data.templates.dev).toEqual({ A: '1' });
+    replaceTemplate(data, { NEW_KEY: 'new_val' });
+    expect(data.templates.main).toEqual({ NEW_KEY: 'new_val' });
   });
 });
 
 describe('mergeTemplate', () => {
   it('adds new keys without overwriting existing', () => {
     const data = makeVault();
-    mergeTemplate(data, 'prod', { DATABASE_URL: 'overwrite_attempt', NEW_KEY: 'new_val' });
-    expect(data.templates.prod.DATABASE_URL).toBe('${pg.url}');
-    expect(data.templates.prod.NEW_KEY).toBe('new_val');
-  });
-  it('creates env bucket if missing', () => {
-    const data = makeVault();
-    mergeTemplate(data, 'dev', { A: '1' });
-    expect(data.templates.dev).toEqual({ A: '1' });
+    mergeTemplate(data, { DATABASE_URL: 'overwrite_attempt', NEW_KEY: 'new_val' });
+    expect(data.templates.main.DATABASE_URL).toBe('${pg.url}');
+    expect(data.templates.main.NEW_KEY).toBe('new_val');
   });
 });
 

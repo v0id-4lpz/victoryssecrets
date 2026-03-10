@@ -14,7 +14,7 @@ function makeVault() {
     prod: { pg: { url: { value: 'postgres://prod', secret: true } } },
   };
   data.templates = {
-    prod: {
+    main: {
       DATABASE_URL: '${pg.url}',
       DB_PASS: '${pg.password}',
       REDIS_HOST: '${redis.host}',
@@ -67,7 +67,7 @@ describe('generateEnv', () => {
 
   it('warns on unresolved references', () => {
     const data = makeVault();
-    data.templates.prod.MISSING = '${mongo.uri}';
+    data.templates.main.MISSING = '${mongo.uri}';
     const { output, warnings } = generateEnv(data, 'prod');
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toContain('unresolved');
@@ -76,13 +76,15 @@ describe('generateEnv', () => {
 
   it('warns on invalid reference format', () => {
     const data = makeVault();
-    data.templates.prod.BAD = '${noDotHere}';
+    data.templates.main.BAD = '${noDotHere}';
     const { warnings } = generateEnv(data, 'prod');
     expect(warnings.some(w => w.includes('invalid reference'))).toBe(true);
   });
 
   it('returns empty for missing template', () => {
-    const { output, warnings } = generateEnv(makeVault(), 'staging');
+    const data = createEmpty();
+    data.templates = {};
+    const { output, warnings } = generateEnv(data, 'staging');
     expect(output).toBe('');
     expect(warnings).toEqual([]);
   });

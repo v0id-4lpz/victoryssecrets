@@ -23,7 +23,7 @@ export function resolveSecrets(vault, envId) {
 }
 
 export function generateEnv(vault, envId) {
-  const template = vault.templates?.[envId];
+  const template = vault.templates?.main;
   if (!template) return { output: '', warnings: [] };
 
   const resolved = resolveSecrets(vault, envId);

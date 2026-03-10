@@ -124,7 +124,7 @@ describe('crypto', () => {
           global: { pg: { url: { value: 'postgres://localhost', secret: true } } },
           envs: { prod: { pg: { password: { value: 'p@$$w0rd!', secret: true } } } },
         },
-        templates: { prod: { DATABASE_URL: '${pg.url}' } },
+        templates: { main: { DATABASE_URL: '${pg.url}' } },
       };
       const salt = generateSalt();
       const key = await deriveKey('strongpassword', salt);

@@ -23,12 +23,9 @@ const vaultData = {
     },
   },
   templates: {
-    prod: {
+    main: {
       DATABASE_URL: '${pg.url}',
       REDIS_HOST: '${redis.host}',
-    },
-    dev: {
-      DATABASE_URL: '${pg.url}',
     },
   },
 };
@@ -70,12 +67,12 @@ describe('buildSearchIndex', () => {
 
   it('includes templates', () => {
     const tpls = index.filter(i => i.type === 'template');
-    expect(tpls).toHaveLength(3);
-    expect(tpls.find(t => t.id === 'prod:DATABASE_URL')).toBeTruthy();
+    expect(tpls).toHaveLength(2);
+    expect(tpls.find(t => t.id === 'DATABASE_URL')).toBeTruthy();
   });
 
   it('handles empty vault data', () => {
-    const idx = buildSearchIndex({ services: {}, environments: [], secrets: { global: {}, envs: {} }, templates: {} });
+    const idx = buildSearchIndex({ services: {}, environments: [], secrets: { global: {}, envs: {} }, templates: { main: {} } });
     expect(idx).toEqual([]);
   });
 });

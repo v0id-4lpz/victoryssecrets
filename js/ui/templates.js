@@ -2,7 +2,7 @@
 
 import * as vault from '../vault.js';
 import { importEnvFile } from '../storage.js';
-import { esc, selectedEnv, setSelectedEnv, renderEnvOptions } from './helpers.js';
+import { esc } from './helpers.js';
 import { renderButton } from './components/button.js';
 import { renderDeleteButton, bindDeleteButtons } from './components/delete-button.js';
 import { bindEditableRows } from './components/editable-row.js';
@@ -32,7 +32,7 @@ function renderValuePickerDropdown() {
           <div class="tpl-picker-group" data-service="${serviceId}">
             <div class="px-2 py-1 text-xs font-semibold text-indigo-400 uppercase tracking-wide">${esc(services[serviceId]?.label || serviceId)}</div>
             ${[...fields].sort((a, b) => a.localeCompare(b)).map(f => `
-              <button data-pick-ref="${serviceId}.${f}" class="w-full text-left px-3 py-1.5 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition font-mono">
+              <button data-pick-ref="${serviceId}.${f}" class="w-full text-left px-3 py-1.5 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition font-mono cursor-pointer">
                 \${${serviceId}.${f}}
               </button>
             `).join('')}
@@ -41,7 +41,7 @@ function renderValuePickerDropdown() {
         `).join('')}
         <div class="border-t border-gray-200 dark:border-gray-700 mt-1 pt-1">
           <div class="px-2 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Magic variables</div>
-          <button data-pick-ref="_ENV_NAME" class="w-full text-left px-3 py-1.5 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition font-mono">\${_ENV_NAME}</button>
+          <button data-pick-ref="_ENV_NAME" class="w-full text-left px-3 py-1.5 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition font-mono cursor-pointer">\${_ENV_NAME}</button>
         </div>
       </div>
     </div>`;
@@ -87,48 +87,31 @@ function renderTextView(tpl) {
 }
 
 export function renderTemplates(render) {
-  const data = vault.getData();
-  const envs = data.environments || [];
+  const tpl = vault.getTemplate();
+  const entries = Object.entries(tpl);
+  const toggleLabel = textMode ? 'Normal view' : 'Text view';
 
-  let envOptions = renderEnvOptions(envs, selectedEnv);
-
-  let templateContent = '';
-  if (selectedEnv) {
-    const tpl = vault.getTemplate(selectedEnv);
-    const entries = Object.entries(tpl);
-    const toggleLabel = textMode ? 'Normal view' : 'Text view';
-
-    templateContent = `
-      <div class="mt-4 p-4 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
-        <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center gap-3">
-            <h3 class="text-sm font-semibold shrink-0">Mapping</h3>
-            ${!textMode ? `<input id="tpl-filter" type="text" placeholder="Filter keys..." class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none w-40" />` : ''}
-          </div>
-          <div class="flex items-center gap-3">
-            ${!textMode ? renderButton('+ Add', { id: 'btn-add-tpl-entry', variant: 'link' }) : ''}
-            ${renderButton('Import .env', { id: 'btn-import-env', variant: 'link' })}
-            <span class="text-gray-300 dark:text-gray-600">|</span>
-            ${renderButton(toggleLabel, { id: 'btn-toggle-text-mode', variant: 'link' })}
-            ${!textMode && entries.length > 0 ? `<span class="text-gray-300 dark:text-gray-600">|</span>${renderButton('Clear', { id: 'btn-clear-tpl', variant: 'danger' })}` : ''}
-          </div>
+  const templateContent = `
+    <div class="mt-4 p-4 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-3">
+          <h3 class="text-sm font-semibold shrink-0">Mapping</h3>
+          ${!textMode ? `<input id="tpl-filter" type="text" placeholder="Filter keys..." class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none w-40" />` : ''}
         </div>
-        ${textMode ? renderTextView(tpl) : renderNormalView(tpl)}
-      </div>`;
-  }
+        <div class="flex items-center gap-3">
+          ${!textMode ? renderButton('+ Add', { id: 'btn-add-tpl-entry', variant: 'link' }) : ''}
+          ${renderButton('Import .env', { id: 'btn-import-env', variant: 'link' })}
+          <span class="text-gray-300 dark:text-gray-600">|</span>
+          ${renderButton(toggleLabel, { id: 'btn-toggle-text-mode', variant: 'link' })}
+          ${!textMode && entries.length > 0 ? `<span class="text-gray-300 dark:text-gray-600">|</span>${renderButton('Clear', { id: 'btn-clear-tpl', variant: 'danger' })}` : ''}
+        </div>
+      </div>
+      ${textMode ? renderTextView(tpl) : renderNormalView(tpl)}
+    </div>`;
 
   return `
     <div class="max-w-3xl">
-      <h2 class="text-lg font-semibold mb-4">Templates .env</h2>
-      <div class="flex gap-3 mb-4">
-        <div>
-          <label class="block text-xs text-gray-500 mb-1">Environment</label>
-          <select id="tpl-env" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-            <option value="">--</option>
-            ${envOptions}
-          </select>
-        </div>
-      </div>
+      <h2 class="text-lg font-semibold mb-4">Template .env</h2>
       ${templateContent}
     </div>`;
 }
@@ -155,11 +138,11 @@ function startTplForm(container, render, { key, value } = {}) {
     onSave: async (values) => {
       const k = values.key.trim();
       const v = values.value.trim();
-      if (!k || !selectedEnv) return;
+      if (!k) return;
       if (!isCreate && k !== key) {
-        await vault.deleteTemplateEntry(selectedEnv, key);
+        await vault.deleteTemplateEntry(key);
       }
-      await vault.setTemplateEntry(selectedEnv, k, v);
+      await vault.setTemplateEntry(k, v);
       activeEditCancel = null;
       render();
     },
@@ -216,9 +199,9 @@ function startTplForm(container, render, { key, value } = {}) {
 
 async function saveTextMode() {
   const textarea = document.getElementById('tpl-textarea');
-  if (!textarea || !selectedEnv) return;
+  if (!textarea) return;
   const parsed = parseTemplateText(textarea.value);
-  await vault.replaceTemplate(selectedEnv, parsed);
+  await vault.replaceTemplate(parsed);
 }
 
 async function handleImportEnv(render) {
@@ -228,7 +211,7 @@ async function handleImportEnv(render) {
     const incoming = parseTemplateText(text);
     if (Object.keys(incoming).length === 0) return;
 
-    const existing = vault.getTemplate(selectedEnv);
+    const existing = vault.getTemplate();
     const hasEntries = Object.keys(existing).length > 0;
 
     if (hasEntries) {
@@ -243,12 +226,12 @@ async function handleImportEnv(render) {
       });
       if (!choice || choice === 'cancel') return;
       if (choice === 'replace') {
-        await vault.replaceTemplate(selectedEnv, incoming);
+        await vault.replaceTemplate(incoming);
       } else {
-        await vault.mergeTemplate(selectedEnv, incoming);
+        await vault.mergeTemplate(incoming);
       }
     } else {
-      await vault.replaceTemplate(selectedEnv, incoming);
+      await vault.replaceTemplate(incoming);
     }
     render();
   } catch (e) {
@@ -258,12 +241,6 @@ async function handleImportEnv(render) {
 }
 
 export function bindTemplates(render) {
-  document.getElementById('tpl-env')?.addEventListener('change', (e) => {
-    setSelectedEnv(e.target.value || null);
-    textMode = false;
-    render();
-  });
-
   document.getElementById('btn-import-env')?.addEventListener('click', () => handleImportEnv(render));
 
   const filterInput = document.getElementById('tpl-filter');
@@ -278,8 +255,8 @@ export function bindTemplates(render) {
   }
 
   document.getElementById('btn-clear-tpl')?.addEventListener('click', async () => {
-    if (selectedEnv && confirm('Clear the entire template?')) {
-      await vault.clearTemplate(selectedEnv);
+    if (confirm('Clear the entire template?')) {
+      await vault.clearTemplate();
       render();
     }
   });
@@ -303,14 +280,12 @@ export function bindTemplates(render) {
   // Edit template entry — same form
   bindEditableRows('[data-edit-tpl]', (row) => {
     const key = row.dataset.editTpl;
-    const tpl = vault.getTemplate(selectedEnv);
+    const tpl = vault.getTemplate();
     startTplForm(row, render, { key, value: tpl[key] || '' });
   }, ['[data-delete-tpl]']);
 
   bindDeleteButtons('[data-delete-tpl]', async (btn) => {
-    if (selectedEnv) {
-      await vault.deleteTemplateEntry(selectedEnv, btn.dataset.deleteTpl);
-      render();
-    }
+    await vault.deleteTemplateEntry(btn.dataset.deleteTpl);
+    render();
   });
 }

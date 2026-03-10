@@ -2,7 +2,7 @@
 
 import * as vault from '../vault.js';
 import { generateEnv } from '../services/env-generator.js';
-import { esc, selectedEnv, setSelectedEnv, renderEnvOptions } from './helpers.js';
+import { selectedEnv, setSelectedEnv, renderEnvOptions } from './helpers.js';
 import { renderButton } from './components/button.js';
 
 export function renderGenerate(render) {

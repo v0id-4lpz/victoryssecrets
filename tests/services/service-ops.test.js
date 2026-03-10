@@ -11,7 +11,7 @@ function makeVault() {
   data.environments = ['prod'];
   data.secrets.global = { pg: { url: { value: 'postgres://...', secret: true } } };
   data.secrets.envs = { prod: { pg: { password: { value: 's3cret', secret: true } } } };
-  data.templates = { prod: { DATABASE_URL: '${pg.url}', REDIS: '${redis.host}' } };
+  data.templates = { main: { DATABASE_URL: '${pg.url}', REDIS: '${redis.host}' } };
   return data;
 }
 
@@ -60,10 +60,10 @@ describe('service-ops', () => {
     it('removes single-ref template entries for the service', () => {
       const data = createEmpty();
       data.services = { pg: { label: 'PG', comment: '' } };
-      data.templates = { prod: { DB: '${pg.url}', OTHER: 'static' } };
+      data.templates = { main: { DB: '${pg.url}', OTHER: 'static' } };
       deleteService(data, 'pg');
-      expect(data.templates.prod.DB).toBeUndefined();
-      expect(data.templates.prod.OTHER).toBe('static');
+      expect(data.templates.main.DB).toBeUndefined();
+      expect(data.templates.main.OTHER).toBe('static');
     });
   });
 
@@ -102,7 +102,7 @@ describe('service-ops', () => {
     it('refactors template references', () => {
       const data = makeVault();
       renameServiceId(data, 'pg', 'postgres');
-      expect(data.templates.prod.DATABASE_URL).toBe('${postgres.url}');
+      expect(data.templates.main.DATABASE_URL).toBe('${postgres.url}');
     });
     it('throws on conflicting newId', () => {
       expect(() => renameServiceId(makeVault(), 'pg', 'redis')).toThrow('already exists');

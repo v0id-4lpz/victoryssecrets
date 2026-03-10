@@ -11,7 +11,7 @@ function makeVault() {
     pg: { url: { value: 'postgres://localhost', secret: true }, password: { value: 's3cret', secret: true } },
   };
   data.secrets.envs = { prod: { redis: { host: { value: 'redis.prod', secret: false } } } };
-  data.templates = { prod: { DATABASE_URL: '${pg.url}', REDIS: '${redis.host}' } };
+  data.templates = { main: { DATABASE_URL: '${pg.url}', REDIS: '${redis.host}' } };
   return data;
 }
 
@@ -86,7 +86,7 @@ describe('secret-ops', () => {
     it('refactors template references', () => {
       const data = makeVault();
       moveSecret(data, { scope: 'global' }, 'pg', 'url', 'pg', 'connection_string');
-      expect(data.templates.prod.DATABASE_URL).toBe('${pg.connection_string}');
+      expect(data.templates.main.DATABASE_URL).toBe('${pg.connection_string}');
     });
     it('cleans up empty service bucket after move', () => {
       const data = makeVault();

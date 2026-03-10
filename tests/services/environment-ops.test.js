@@ -10,7 +10,6 @@ function makeVault() {
   data.environments = ['prod', 'dev'];
   data.environmentMeta = { prod: { comment: 'Production' }, dev: { comment: '' } };
   data.secrets.envs = { prod: { pg: { url: { value: 'x', secret: true } } }, dev: {} };
-  data.templates = { prod: { DB: '${pg.url}' }, dev: {} };
   return data;
 }
 
@@ -30,12 +29,11 @@ describe('environment-ops', () => {
       addEnvironment(data, 'staging', 'Staging env');
       expect(data.environments).toContain('staging');
     });
-    it('initializes meta, secrets, and templates', () => {
+    it('initializes meta and secrets', () => {
       const data = makeVault();
       addEnvironment(data, 'staging', 'Staging env');
       expect(data.environmentMeta.staging.comment).toBe('Staging env');
       expect(data.secrets.envs.staging).toEqual({});
-      expect(data.templates.staging).toEqual({});
     });
     it('throws on duplicate', () => {
       expect(() => addEnvironment(makeVault(), 'prod')).toThrow('already exists');
@@ -55,12 +53,6 @@ describe('environment-ops', () => {
       expect(data.secrets.envs.production).toBeDefined();
       expect(data.secrets.envs.prod).toBeUndefined();
     });
-    it('moves templates', () => {
-      const data = makeVault();
-      renameEnvironment(data, 'prod', 'production');
-      expect(data.templates.production).toBeDefined();
-      expect(data.templates.prod).toBeUndefined();
-    });
     it('moves meta', () => {
       const data = makeVault();
       renameEnvironment(data, 'prod', 'production');
@@ -79,11 +71,11 @@ describe('environment-ops', () => {
       deleteEnvironment(data, 'prod');
       expect(data.environments).not.toContain('prod');
     });
-    it('removes secrets, templates, and meta', () => {
+    it('removes secrets and meta', () => {
       const data = makeVault();
       deleteEnvironment(data, 'prod');
       expect(data.secrets.envs.prod).toBeUndefined();
-      expect(data.templates.prod).toBeUndefined();
+      expect(data.environmentMeta.prod).toBeUndefined();
     });
   });
 
