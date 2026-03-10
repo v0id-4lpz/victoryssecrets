@@ -19,8 +19,8 @@
   "author": "",
   "license": "ISC",
   "build": {
-    "appId": "com.victors-secrets.app",
-    "productName": "Victory's Secrets",
+    "appId": "com.victoryssecrets.app",
+    "productName": "VictorysSecrets",
     "files": [
       "main.js",
       "preload.js",
@@ -29,11 +29,15 @@
       "css/dist.css"
     ],
     "afterPack": "./afterPack.js",
+    "dmg": {
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
     "mac": {
       "target": [
         "dmg",
         "zip"
       ],
+      "artifactName": "${productName}-${version}-${arch}-portable.${ext}",
       "category": "public.app-category.developer-tools",
       "identity": null,
       "type": "development",
@@ -46,11 +50,21 @@
       ],
       "icon": "assets/icon.ico"
     },
+    "nsis": {
+      "artifactName": "${productName}-${version}-setup.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.${ext}"
+    },
+    "appImage": {
+      "artifactName": "${productName}-${version}.${ext}"
+    },
     "linux": {
       "target": [
         "AppImage",
         "tar.gz"
-      ]
+      ],
+      "artifactName": "${productName}-${version}-portable.${ext}"
     }
   },
   "devDependencies": {
