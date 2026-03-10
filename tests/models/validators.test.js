@@ -51,7 +51,7 @@ describe('validateServiceId', () => {
   });
 
   it('returns error when service already exists', () => {
-    expect(validateServiceId('pg', { pg: {} })).toContain('existe deja');
+    expect(validateServiceId('pg', { pg: {} })).toContain('already exists');
   });
 
   it('returns null for valid new id', () => {
@@ -65,7 +65,7 @@ describe('validateEnvironmentId', () => {
   });
 
   it('returns error when env already exists', () => {
-    expect(validateEnvironmentId('prod', ['prod', 'dev'])).toContain('existe deja');
+    expect(validateEnvironmentId('prod', ['prod', 'dev'])).toContain('already exists');
   });
 
   it('returns null for valid new id', () => {
@@ -83,7 +83,7 @@ describe('validateServiceRename', () => {
   });
 
   it('returns error when newId conflicts', () => {
-    expect(validateServiceRename('pg', 'redis', { redis: {} })).toContain('existe deja');
+    expect(validateServiceRename('pg', 'redis', { redis: {} })).toContain('already exists');
   });
 
   it('returns null for valid rename', () => {
@@ -101,7 +101,7 @@ describe('validateEnvironmentRename', () => {
   });
 
   it('returns error when newId conflicts', () => {
-    expect(validateEnvironmentRename('prod', 'dev', ['prod', 'dev'])).toContain('existe deja');
+    expect(validateEnvironmentRename('prod', 'dev', ['prod', 'dev'])).toContain('already exists');
   });
 });
 

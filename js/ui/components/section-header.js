@@ -17,9 +17,9 @@ export function renderSectionHeader(title, actions = '') {
 }
 
 /**
- * Renders an "Ajouter" button.
+ * Renders an "Add" button.
  * @param {string} id - Button element id
  */
 export function renderAddButton(id) {
-  return renderButton('+ Ajouter', { variant: 'primary', id });
+  return renderButton('+ Add', { variant: 'primary', id });
 }

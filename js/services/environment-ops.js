@@ -5,7 +5,7 @@ export function hasEnvironment(data, envId) {
 }
 
 export function addEnvironment(data, envId, comment = '') {
-  if (data.environments.includes(envId)) throw new Error(`L'environnement "${envId}" existe deja`);
+  if (data.environments.includes(envId)) throw new Error(`Environment "${envId}" already exists`);
   data.environments.push(envId);
   if (!data.environmentMeta) data.environmentMeta = {};
   if (!data.environmentMeta[envId]) data.environmentMeta[envId] = {};

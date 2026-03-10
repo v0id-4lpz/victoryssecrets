@@ -43,21 +43,21 @@ export function renderWelcome() {
       <div class="no-drag max-w-md w-full space-y-8 p-8 relative z-10">
         <div class="text-center">
           <h1 class="text-4xl font-bold text-gray-900 dark:text-white">Victory's Secrets</h1>
-          <p class="mt-2 text-gray-500 dark:text-gray-400">Gestionnaire de secrets local</p>
+          <p class="mt-2 text-gray-500 dark:text-gray-400">Local secrets manager</p>
         </div>
         <div class="space-y-4">
-          ${renderButton('Creer un nouveau vault', { id: 'btn-create', variant: 'primary', cls: 'w-full flex justify-center py-3 !text-sm font-medium' })}
-          ${renderButton('Ouvrir un vault existant', { id: 'btn-open', variant: 'secondary', cls: 'w-full flex justify-center py-3 !text-sm font-medium' })}
+          ${renderButton('Create a new vault', { id: 'btn-create', variant: 'primary', cls: 'w-full flex justify-center py-3 !text-sm font-medium' })}
+          ${renderButton('Open an existing vault', { id: 'btn-open', variant: 'secondary', cls: 'w-full flex justify-center py-3 !text-sm font-medium' })}
         </div>
         ${renderRecentsList()}
         <div id="password-form" class="hidden space-y-4">
-          <input id="password-input" type="password" placeholder="Mot de passe maitre" class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+          <input id="password-input" type="password" placeholder="Master password" class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
           <div id="password-strength" class="hidden">
             ${renderStrengthBar('strength')}
           </div>
-          <input id="password-confirm" type="password" placeholder="Confirmer le mot de passe" class="hidden w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+          <input id="password-confirm" type="password" placeholder="Confirm password" class="hidden w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
           <p id="password-error" class="text-red-500 text-sm hidden"></p>
-          ${renderButton('Deverrouiller', { id: 'btn-submit-password', variant: 'primary', cls: 'w-full py-3 !text-sm font-medium' })}
+          ${renderButton('Unlock', { id: 'btn-submit-password', variant: 'primary', cls: 'w-full py-3 !text-sm font-medium' })}
         </div>
         <div class="flex justify-center">
           ${renderButton(icons.theme(), { id: 'btn-theme-welcome', variant: 'icon', title: 'Toggle theme' })}
@@ -88,7 +88,7 @@ export function bindWelcome(render) {
     try {
       await storage.createFile();
       pendingBuffer = null;
-      showPasswordForm('create', 'Creer le vault');
+      showPasswordForm('create', 'Create vault');
     } catch (e) {
       if (e.name !== 'AbortError') console.error('Create vault error:', e);
     }
@@ -98,7 +98,7 @@ export function bindWelcome(render) {
     try {
       const buffer = await storage.openFile();
       pendingBuffer = buffer;
-      showPasswordForm('open', 'Deverrouiller');
+      showPasswordForm('open', 'Unlock');
     } catch (e) {
       if (e.name !== 'AbortError') console.error('Open vault error:', e);
     }
@@ -112,7 +112,7 @@ export function bindWelcome(render) {
       try {
         const buffer = await storage.openFilePath(filePath);
         pendingBuffer = buffer;
-        showPasswordForm('open', 'Deverrouiller');
+        showPasswordForm('open', 'Unlock');
       } catch {
         removeRecent(filePath);
         render();
@@ -142,20 +142,20 @@ export function bindWelcome(render) {
     errorEl.classList.add('hidden');
 
     if (!password) {
-      errorEl.textContent = 'Mot de passe requis';
+      errorEl.textContent = 'Password required';
       errorEl.classList.remove('hidden');
       return;
     }
 
     if (pendingAction === 'create') {
       if (password.length < MIN_PASSWORD_LENGTH) {
-        errorEl.textContent = `Le mot de passe doit contenir au moins ${MIN_PASSWORD_LENGTH} caracteres`;
+        errorEl.textContent = `Password must be at least ${MIN_PASSWORD_LENGTH} characters`;
         errorEl.classList.remove('hidden');
         return;
       }
       const confirm = document.getElementById('password-confirm').value;
       if (password !== confirm) {
-        errorEl.textContent = 'Les mots de passe ne correspondent pas';
+        errorEl.textContent = 'Passwords do not match';
         errorEl.classList.remove('hidden');
         return;
       }
@@ -172,7 +172,7 @@ export function bindWelcome(render) {
       render();
     } catch (e) {
       setButtonLoading(submitBtn, false, submitLabel);
-      errorEl.textContent = 'Mot de passe incorrect ou fichier invalide';
+      errorEl.textContent = 'Incorrect password or invalid file';
       errorEl.classList.remove('hidden');
     }
   };

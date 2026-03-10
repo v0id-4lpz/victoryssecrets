@@ -10,10 +10,10 @@ export function passwordStrength(password) {
   if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
   if (/\d/.test(password)) score++;
   if (/[^a-zA-Z0-9]/.test(password)) score++;
-  if (score <= 1) return { level: 0, label: 'Faible', color: 'bg-red-500' };
-  if (score <= 3) return { level: 1, label: 'Moyen', color: 'bg-yellow-500' };
-  if (score <= 5) return { level: 2, label: 'Fort', color: 'bg-green-500' };
-  return { level: 3, label: 'Tres fort', color: 'bg-emerald-500' };
+  if (score <= 1) return { level: 0, label: 'Weak', color: 'bg-red-500' };
+  if (score <= 3) return { level: 1, label: 'Fair', color: 'bg-yellow-500' };
+  if (score <= 5) return { level: 2, label: 'Strong', color: 'bg-green-500' };
+  return { level: 3, label: 'Very strong', color: 'bg-emerald-500' };
 }
 
 export function renderStrengthBar(idPrefix = 'strength') {

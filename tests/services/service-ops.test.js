@@ -32,7 +32,7 @@ describe('service-ops', () => {
       expect(data.services.mongo).toEqual({ label: 'MongoDB', comment: 'NoSQL' });
     });
     it('throws on duplicate', () => {
-      expect(() => addService(makeVault(), 'pg', 'PG')).toThrow('existe deja');
+      expect(() => addService(makeVault(), 'pg', 'PG')).toThrow('already exists');
     });
     it('defaults comment to empty string', () => {
       const data = makeVault();
@@ -105,7 +105,7 @@ describe('service-ops', () => {
       expect(data.templates.prod.DATABASE_URL).toBe('${postgres.url}');
     });
     it('throws on conflicting newId', () => {
-      expect(() => renameServiceId(makeVault(), 'pg', 'redis')).toThrow('existe deja');
+      expect(() => renameServiceId(makeVault(), 'pg', 'redis')).toThrow('already exists');
     });
     it('no-ops when oldId === newId', () => {
       const data = makeVault();

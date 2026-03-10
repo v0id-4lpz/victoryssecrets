@@ -19,18 +19,18 @@ export function renderSettings(render) {
 
   return `
     <div class="max-w-lg space-y-8">
-      <h2 class="text-lg font-semibold">Parametres</h2>
+      <h2 class="text-lg font-semibold">Settings</h2>
 
       <!-- Vault info -->
       <section class="space-y-3">
         <h3 class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Vault</h3>
         <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
           <div class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
-            <span class="text-gray-500 dark:text-gray-400">Fichier</span>
+            <span class="text-gray-500 dark:text-gray-400">File</span>
             <span class="truncate" title="${esc(getFilePath())}">${esc(shortenPath(getFilePath()))}</span>
             <span class="text-gray-500 dark:text-gray-400">Services</span>
             <span>${serviceCount}</span>
-            <span class="text-gray-500 dark:text-gray-400">Environnements</span>
+            <span class="text-gray-500 dark:text-gray-400">Environments</span>
             <span>${envCount}</span>
             <span class="text-gray-500 dark:text-gray-400">Secrets</span>
             <span>${secretCount}</span>
@@ -42,11 +42,11 @@ export function renderSettings(render) {
 
       <!-- Security -->
       <section class="space-y-3">
-        <h3 class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Securite</h3>
+        <h3 class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Security</h3>
         <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-5">
           <!-- Autolock -->
           <div class="flex items-center justify-between">
-            <label for="settings-autolock" class="text-sm">Verrouillage automatique</label>
+            <label for="settings-autolock" class="text-sm">Auto-lock</label>
             <select id="settings-autolock" class="${INPUT_CLS} w-20 text-center">
               ${[1, 2, 5, 10, 15, 30, 60].map(m => `<option value="${m}"${m === settings.autolockMinutes ? ' selected' : ''}>${m} min</option>`).join('')}
             </select>
@@ -54,15 +54,15 @@ export function renderSettings(render) {
 
           <!-- Change password -->
           <div class="border-t border-gray-200 dark:border-gray-700 pt-5 space-y-3">
-            <h4 class="text-sm font-medium">Changer le mot de passe</h4>
-            <input id="chpw-current" type="password" placeholder="Mot de passe actuel" class="w-full ${INPUT_CLS}" />
-            <input id="chpw-new" type="password" placeholder="Nouveau mot de passe" class="w-full ${INPUT_CLS}" />
+            <h4 class="text-sm font-medium">Change password</h4>
+            <input id="chpw-current" type="password" placeholder="Current password" class="w-full ${INPUT_CLS}" />
+            <input id="chpw-new" type="password" placeholder="New password" class="w-full ${INPUT_CLS}" />
             ${renderStrengthBar('chpw-strength')}
-            <input id="chpw-confirm" type="password" placeholder="Confirmer le nouveau mot de passe" class="w-full ${INPUT_CLS}" />
+            <input id="chpw-confirm" type="password" placeholder="Confirm new password" class="w-full ${INPUT_CLS}" />
             <p id="chpw-error" class="text-red-500 text-sm hidden"></p>
             <p id="chpw-success" class="text-green-500 text-sm hidden"></p>
             <div class="flex justify-end">
-              ${renderButton('Changer le mot de passe', { id: 'chpw-submit', variant: 'primary' })}
+              ${renderButton('Change password', { id: 'chpw-submit', variant: 'primary' })}
             </div>
           </div>
         </div>
@@ -77,7 +77,7 @@ export function bindSettings(render) {
     const minutes = parseInt(autolockSelect.value, 10);
     await vault.setAutolockMinutes(minutes);
     setAutolockMinutes(minutes);
-    showToast(`Verrouillage auto: ${minutes} min`, 'success');
+    showToast(`Auto-lock: ${minutes} min`, 'success');
   };
 
   // Change password
@@ -97,32 +97,32 @@ export function bindSettings(render) {
     successEl.classList.add('hidden');
 
     if (!current || !newPw) {
-      errorEl.textContent = 'Tous les champs sont requis';
+      errorEl.textContent = 'All fields are required';
       errorEl.classList.remove('hidden');
       return;
     }
     if (newPw.length < MIN_PASSWORD_LENGTH) {
-      errorEl.textContent = `Le nouveau mot de passe doit contenir au moins ${MIN_PASSWORD_LENGTH} caracteres`;
+      errorEl.textContent = `New password must be at least ${MIN_PASSWORD_LENGTH} characters`;
       errorEl.classList.remove('hidden');
       return;
     }
     if (newPw !== confirm) {
-      errorEl.textContent = 'Les mots de passe ne correspondent pas';
+      errorEl.textContent = 'Passwords do not match';
       errorEl.classList.remove('hidden');
       return;
     }
     setButtonLoading(submitBtn, true);
     try {
       await vault.changePassword(current, newPw);
-      setButtonLoading(submitBtn, false, 'Changer le mot de passe');
-      showToast('Mot de passe modifie', 'success');
+      setButtonLoading(submitBtn, false, 'Change password');
+      showToast('Password changed', 'success');
       document.getElementById('chpw-current').value = '';
       document.getElementById('chpw-new').value = '';
       document.getElementById('chpw-confirm').value = '';
       updateStrengthBar('', 'chpw-strength');
     } catch {
-      setButtonLoading(submitBtn, false, 'Changer le mot de passe');
-      errorEl.textContent = 'Mot de passe actuel incorrect';
+      setButtonLoading(submitBtn, false, 'Change password');
+      errorEl.textContent = 'Current password is incorrect';
       errorEl.classList.remove('hidden');
     }
   };

@@ -8,7 +8,7 @@ export function renderDeleteButton(dataAttr, value) {
     variant: 'icon',
     attrs: `${dataAttr}="${esc(value)}"`,
     cls: 'text-red-400 hover:bg-red-500/10 hover:text-red-500',
-    title: 'Supprimer',
+    title: 'Delete',
   });
 }
 

@@ -69,7 +69,7 @@ function readVaultFile(filePath) {
 ipcMain.handle('file:create', async () => {
   try {
     const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
-      title: 'Creer un vault',
+      title: 'Create a vault',
       defaultPath: 'secrets.vsv',
       filters: [{ name: "Victory's Secrets Vault", extensions: ['vsv'] }],
     });
@@ -83,7 +83,7 @@ ipcMain.handle('file:create', async () => {
 ipcMain.handle('file:open', async () => {
   try {
     const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
-      title: 'Ouvrir un vault',
+      title: 'Open a vault',
       filters: [{ name: "Victory's Secrets Vault", extensions: ['vsv'] }],
       properties: ['openFile'],
     });
@@ -147,7 +147,7 @@ ipcMain.handle('crypto:argon2id', async (_event, { password, salt }) => {
 ipcMain.handle('file:import-env', async () => {
   try {
     const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
-      title: 'Importer un fichier .env',
+      title: 'Import a .env file',
       filters: [{ name: 'Tous les fichiers', extensions: ['*'] }],
       properties: ['openFile', 'showHiddenFiles'],
     });

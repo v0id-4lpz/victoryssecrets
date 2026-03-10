@@ -18,7 +18,7 @@ export function renderServices(render) {
       ${renderSectionHeader('Services', renderAddButton('btn-add-service'))}
       <div id="service-list" class="space-y-2">
         ${services.length === 0
-          ? renderEmptyState('Aucun service.')
+          ? renderEmptyState('No services.')
           : services.map(([id, s]) =>
               renderEditableRow('data-edit-service', id,
                 `<div class="min-w-0">
@@ -42,11 +42,11 @@ function startServiceForm(container, render, { id, label, comment } = {}) {
   startInlineEdit(container, {
     rows: [
       [
-        { name: 'label', value: label || '', placeholder: 'Label (ex: PostgreSQL)' },
-        { name: 'id', value: id || '', placeholder: 'Cle (ex: postgres)' },
+        { name: 'label', value: label || '', placeholder: 'Label (e.g. PostgreSQL)' },
+        { name: 'id', value: id || '', placeholder: 'Key (e.g. postgres)' },
       ],
       [
-        { name: 'comment', value: comment || '', placeholder: 'Commentaire (optionnel)' },
+        { name: 'comment', value: comment || '', placeholder: 'Comment (optional)' },
       ],
     ],
     onInput: (name, value, getValues) => {
@@ -66,13 +66,13 @@ function startServiceForm(container, render, { id, label, comment } = {}) {
       try {
         if (isCreate) {
           await vault.addService(newId, values.label, values.comment);
-          showToast('Service ajoute', 'success');
+          showToast('Service added', 'success');
         } else {
           if (newId !== id) await vault.renameServiceId(id, newId);
           const targetId = newId !== id ? newId : id;
           if (values.label !== label) await vault.renameService(targetId, values.label);
           if (values.comment !== (comment || '')) await vault.setServiceComment(targetId, values.comment);
-          showToast('Service modifie', 'success');
+          showToast('Service updated', 'success');
         }
         render();
       } catch (e) {
@@ -97,7 +97,7 @@ export function bindServices(render) {
   }, ['[data-delete-service]']);
 
   bindDeleteButtons('[data-delete-service]', async (btn) => {
-    if (confirm(`Supprimer le service "${btn.dataset.deleteService}" ?`)) {
+    if (confirm(`Delete service "${btn.dataset.deleteService}"?`)) {
       await vault.deleteService(btn.dataset.deleteService);
       render();
     }

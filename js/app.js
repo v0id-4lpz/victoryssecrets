@@ -44,7 +44,7 @@ function renderSearchModal() {
       <div class="bg-white dark:bg-gray-900 rounded-xl w-full max-w-lg border border-gray-200 dark:border-gray-700 shadow-xl overflow-hidden">
         <div class="flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
           ${icons.search()}
-          <input id="search-input" type="text" placeholder="Rechercher services, secrets, templates..." class="flex-1 bg-transparent text-sm focus:outline-none" />
+          <input id="search-input" type="text" placeholder="Search services, secrets, templates..." class="flex-1 bg-transparent text-sm focus:outline-none" />
           <kbd class="text-xs text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">Esc</kbd>
         </div>
         <div id="search-results" class="max-h-80 overflow-y-auto p-2"></div>
@@ -70,7 +70,7 @@ const SEARCH_TYPE_COLORS = {
 };
 
 function renderSearchResults(results) {
-  if (results.length === 0) return '<p class="text-gray-400 text-xs px-3 py-4 text-center">Aucun resultat</p>';
+  if (results.length === 0) return '<p class="text-gray-400 text-xs px-3 py-4 text-center">No results</p>';
   return results.map(r => `
     <button data-search-nav="${r.section}" class="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition">
       <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded ${SEARCH_TYPE_COLORS[r.type]}">${SEARCH_TYPE_LABELS[r.type]}</span>
@@ -139,9 +139,9 @@ function renderMain() {
           <span class="text-xs text-gray-400 truncate">${shortenPath(getFilePath())}</span>
         </div>
         <div class="no-drag flex items-center gap-3">
-          ${renderButton(icons.search(), { id: 'btn-search', variant: 'icon', title: 'Rechercher (Ctrl+K)' })}
+          ${renderButton(icons.search(), { id: 'btn-search', variant: 'icon', title: 'Search (Ctrl+K)' })}
           ${renderButton(icons.theme(), { id: 'btn-theme', variant: 'icon', title: 'Toggle theme' })}
-          ${renderButton('Verrouiller', { id: 'btn-lock', cls: 'px-3 py-1.5 text-sm rounded-lg bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50' })}
+          ${renderButton('Lock', { id: 'btn-lock', cls: 'px-3 py-1.5 text-sm rounded-lg bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50' })}
         </div>
       </header>
 
@@ -149,13 +149,13 @@ function renderMain() {
         <!-- Sidebar -->
         <nav class="w-56 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 p-4 space-y-1 shrink-0">
           ${renderNavItem('services', 'Services')}
-          ${renderNavItem('environments', 'Environnements')}
+          ${renderNavItem('environments', 'Environments')}
           ${renderNavItem('secrets', 'Secrets')}
           <div class="!mt-4 border-t border-gray-200 dark:border-gray-700 pt-3"></div>
           ${renderNavItem('templates', 'Templates')}
-          ${renderNavItem('generate', 'Generer .env')}
+          ${renderNavItem('generate', 'Generate .env')}
           <div class="!mt-4 border-t border-gray-200 dark:border-gray-700 pt-3">
-            ${renderNavItem('settings', 'Parametres')}
+            ${renderNavItem('settings', 'Settings')}
           </div>
         </nav>
 
@@ -170,7 +170,7 @@ function renderMain() {
       <div id="privacy-overlay" class="hidden fixed inset-0 z-[100] bg-gray-50/80 dark:bg-gray-950/80 backdrop-blur-lg flex items-center justify-center">
         <div class="text-center">
           <h2 class="text-2xl font-bold text-gray-400 dark:text-gray-600">Victory's Secrets</h2>
-          <p class="text-sm text-gray-400 dark:text-gray-600 mt-1">Cliquez pour revenir</p>
+          <p class="text-sm text-gray-400 dark:text-gray-600 mt-1">Click to return</p>
         </div>
       </div>
     </div>`;
@@ -225,7 +225,7 @@ function render() {
   } else {
     const settings = vault.getSettings();
     setAutolockMinutes(settings.autolockMinutes);
-    startAutoLock(() => { clearSecretStore(); vault.lock(); render(); showToast('Vault verrouille (inactivite)', 'info'); });
+    startAutoLock(() => { clearSecretStore(); vault.lock(); render(); showToast('Vault locked (inactivity)', 'info'); });
     app.innerHTML = renderMain();
     bindMain();
   }

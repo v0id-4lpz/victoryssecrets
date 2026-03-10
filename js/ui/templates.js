@@ -16,7 +16,7 @@ function renderValuePickerDropdown() {
   return `
     <div id="tpl-picker-dropdown" class="hidden absolute z-50 mt-1 w-80 max-h-72 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl">
       <div class="p-2 border-b border-gray-200 dark:border-gray-700">
-        <input id="tpl-picker-search" type="text" placeholder="Rechercher..." class="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+        <input id="tpl-picker-search" type="text" placeholder="Search..." class="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
       </div>
       <div id="tpl-picker-list" class="p-1">
         ${serviceEntries.map(([serviceId, fields]) => `
@@ -27,17 +27,17 @@ function renderValuePickerDropdown() {
                 \${${serviceId}.${f}}
               </button>
             `).join('')}
-            ${fields.size === 0 ? '<div class="px-3 py-1 text-xs text-gray-500 italic">Aucun champ defini</div>' : ''}
+            ${fields.size === 0 ? '<div class="px-3 py-1 text-xs text-gray-500 italic">No fields defined</div>' : ''}
           </div>
         `).join('')}
         <div class="border-t border-gray-200 dark:border-gray-700 mt-1 pt-1">
-          <div class="px-2 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Variables magiques</div>
+          <div class="px-2 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Magic variables</div>
           <button data-pick-ref="_ENV_NAME" class="w-full text-left px-3 py-1.5 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition font-mono">\${_ENV_NAME}</button>
         </div>
         <div class="border-t border-gray-200 dark:border-gray-700 mt-1 pt-1 p-2">
-          <div class="px-0 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Valeur libre</div>
+          <div class="px-0 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Custom value</div>
           <div class="flex gap-1">
-            <input id="tpl-free-value" type="text" placeholder="Saisir une valeur..." class="flex-1 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+            <input id="tpl-free-value" type="text" placeholder="Enter a value..." class="flex-1 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
             ${renderButton('OK', { id: 'tpl-free-value-ok', variant: 'success', cls: '!px-2 !py-1 !text-xs' })}
           </div>
         </div>
@@ -72,18 +72,18 @@ export function renderTemplates(render) {
         <div class="flex items-center justify-between mb-3">
           <h3 class="text-sm font-semibold">Mapping</h3>
           <div class="flex gap-3">
-            ${renderButton('Importer .env', { id: 'btn-import-env', variant: 'ghost' })}
-            ${renderButton('+ Ajouter', { id: 'btn-add-tpl-entry', variant: 'ghost' })}
-            ${entries.length > 0 ? renderButton('Vider', { id: 'btn-clear-tpl', variant: 'danger' }) : ''}
+            ${renderButton('Import .env', { id: 'btn-import-env', variant: 'ghost' })}
+            ${renderButton('+ Add', { id: 'btn-add-tpl-entry', variant: 'ghost' })}
+            ${entries.length > 0 ? renderButton('Clear', { id: 'btn-clear-tpl', variant: 'danger' }) : ''}
           </div>
         </div>
         <div id="tpl-entry-list" class="space-y-1">
           ${entries.length === 0
-            ? '<p class="text-gray-400 text-xs">Aucune entree.</p>'
+            ? '<p class="text-gray-400 text-xs">No entries.</p>'
             : entries.map(([key, val]) => `
               <div class="group flex items-center gap-3 text-sm py-1 font-mono cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 -mx-2 px-2 rounded transition" data-edit-tpl="${esc(key)}">
                 <span class="w-48 text-gray-300 shrink-0 pointer-events-none">${esc(key)}</span>
-                <span class="flex-1 ${val ? 'text-gray-500' : 'text-gray-600 italic'} pointer-events-none">${val ? esc(val) : 'Non defini'}</span>
+                <span class="flex-1 ${val ? 'text-gray-500' : 'text-gray-600 italic'} pointer-events-none">${val ? esc(val) : 'Not defined'}</span>
                 ${renderDeleteButton('data-delete-tpl', key)}
               </div>`).join('')
           }
@@ -98,7 +98,7 @@ export function renderTemplates(render) {
       <h2 class="text-lg font-semibold mb-4">Templates .env</h2>
       <div class="flex gap-3 mb-4">
         <div>
-          <label class="block text-xs text-gray-500 mb-1">Environnement</label>
+          <label class="block text-xs text-gray-500 mb-1">Environment</label>
           <select id="tpl-env" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
             <option value="">--</option>
             ${envOptions}
@@ -113,7 +113,7 @@ function startTplForm(container, render, { key, value } = {}) {
   const isCreate = !key;
 
   const pickerBtnHtml = `<button type="button" data-tpl-picker-btn class="flex-1 px-3 py-1 rounded-lg border border-indigo-500 bg-white dark:bg-gray-800 text-sm font-mono text-left truncate focus:ring-2 focus:ring-indigo-500 focus:outline-none ${value ? 'text-white' : 'text-gray-400'}">
-    ${value ? esc(value) : 'Choisir une valeur...'}
+    ${value ? esc(value) : 'Choose a value...'}
   </button>`;
 
   startInlineEdit(container, {
@@ -214,7 +214,7 @@ export function bindTemplates(render) {
   });
 
   document.getElementById('btn-clear-tpl')?.addEventListener('click', async () => {
-    if (selectedEnv && confirm('Vider tout le template ?')) {
+    if (selectedEnv && confirm('Clear the entire template?')) {
       await vault.clearTemplate(selectedEnv);
       render();
     }

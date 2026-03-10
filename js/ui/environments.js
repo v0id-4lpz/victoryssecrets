@@ -15,10 +15,10 @@ export function renderEnvironments(render) {
   const envs = data.environments || [];
   return `
     <div class="max-w-3xl">
-      ${renderSectionHeader('Environnements', renderAddButton('btn-add-env'))}
+      ${renderSectionHeader('Environments', renderAddButton('btn-add-env'))}
       <div id="env-list" class="space-y-2">
         ${envs.length === 0
-          ? renderEmptyState('Aucun environnement.')
+          ? renderEmptyState('No environments.')
           : envs.map(env => {
               const comment = vault.getEnvironmentComment(env);
               return renderEditableRow('data-edit-env', env,
@@ -42,7 +42,7 @@ function startEnvForm(container, render, { id, comment } = {}) {
         { name: 'id', value: id || '', placeholder: 'ex: dev, staging, prod' },
       ],
       [
-        { name: 'comment', value: comment || '', placeholder: 'Commentaire (optionnel)' },
+        { name: 'comment', value: comment || '', placeholder: 'Comment (optional)' },
       ],
     ],
     onSave: async (values) => {
@@ -51,12 +51,12 @@ function startEnvForm(container, render, { id, comment } = {}) {
       try {
         if (isCreate) {
           await vault.addEnvironment(newId, values.comment);
-          showToast('Environnement ajoute', 'success');
+          showToast('Environment added', 'success');
         } else {
           if (newId !== id) await vault.renameEnvironment(id, newId);
           const targetId = newId !== id ? newId : id;
           if (values.comment !== (comment || '')) await vault.setEnvironmentComment(targetId, values.comment);
-          showToast('Environnement modifie', 'success');
+          showToast('Environment updated', 'success');
         }
         render();
       } catch (e) {
@@ -81,7 +81,7 @@ export function bindEnvironments(render) {
   }, ['[data-delete-env]']);
 
   bindDeleteButtons('[data-delete-env]', async (btn) => {
-    if (confirm(`Supprimer l'environnement "${btn.dataset.deleteEnv}" ?`)) {
+    if (confirm(`Delete environment "${btn.dataset.deleteEnv}"?`)) {
       await vault.deleteEnvironment(btn.dataset.deleteEnv);
       render();
     }

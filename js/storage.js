@@ -58,7 +58,7 @@ export async function importEnvFile() {
     return window.electronAPI.importEnv();
   } else {
     const [handle] = await window.showOpenFilePicker({
-      types: [{ description: 'Fichiers .env', accept: { 'text/plain': ['.env'] } }],
+      types: [{ description: '.env files', accept: { 'text/plain': ['.env'] } }],
     });
     const file = await handle.getFile();
     return file.text();

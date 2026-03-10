@@ -67,15 +67,15 @@ export function renderSecrets(render) {
       <!-- Level selector -->
       <div class="flex flex-wrap gap-3 mb-6 items-end">
         <div>
-          <label class="block text-xs text-gray-500 mb-1">Niveau</label>
+          <label class="block text-xs text-gray-500 mb-1">Level</label>
           <select id="secret-scope" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
             <option value="global" ${secretLevelScope === 'global' ? 'selected' : ''}>Global</option>
-            <option value="env" ${secretLevelScope === 'env' ? 'selected' : ''}>Environnement</option>
+            <option value="env" ${secretLevelScope === 'env' ? 'selected' : ''}>Environment</option>
           </select>
         </div>
         ${secretLevelScope === 'env' ? `
         <div>
-          <label class="block text-xs text-gray-500 mb-1">Environnement</label>
+          <label class="block text-xs text-gray-500 mb-1">Environment</label>
           <select id="secret-env" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
             <option value="">--</option>
             ${renderEnvOptions(envs, selectedEnv)}
@@ -88,7 +88,7 @@ export function renderSecrets(render) {
       <!-- Secrets list -->
       <div id="secret-list">
         ${secretEntries.length === 0
-          ? renderEmptyState('Aucun secret a ce niveau.')
+          ? renderEmptyState('No secrets at this level.')
           : `<div class="space-y-3">${secretEntries.map(([serviceId, fields]) => `
             <div class="p-4 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
               <h3 class="text-sm font-semibold text-indigo-500 mb-2">${esc(data.services[serviceId]?.label || serviceId)}</h3>
@@ -101,8 +101,8 @@ export function renderSecrets(render) {
                   <span class="flex-1 font-mono pointer-events-none" data-secret-display="${key}">
                     ${entry.secret && entry.value ? '<span class="text-gray-400">\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022</span>' : esc(entry.value)}
                   </span>
-                  ${renderButton(icons.copy(), { variant: 'icon', attrs: `data-copy-secret="${key}"`, title: 'Copier' })}
-                  ${entry.secret ? renderButton(icons.eye(), { variant: 'icon', attrs: `data-toggle-secret="${key}" data-visible="false"`, title: 'Afficher/Masquer' }) : ''}
+                  ${renderButton(icons.copy(), { variant: 'icon', attrs: `data-copy-secret="${key}"`, title: 'Copy' })}
+                  ${entry.secret ? renderButton(icons.eye(), { variant: 'icon', attrs: `data-toggle-secret="${key}" data-visible="false"`, title: 'Show/Hide' }) : ''}
                   ${renderDeleteButton('data-remove-secret', key)}
                 </div>`;
                 }).join('')}
@@ -128,12 +128,12 @@ function startSecretForm(container, render, { serviceId, field, value, isSecret 
     Secret
   </label>`;
 
-  const genBtnHtml = renderButton(icons.refresh(), { variant: 'secondary', cls: '!px-2 !py-1 shrink-0', attrs: 'data-inline-gen', title: 'Generer' });
+  const genBtnHtml = renderButton(icons.refresh(), { variant: 'secondary', cls: '!px-2 !py-1 shrink-0', attrs: 'data-inline-gen', title: 'Generate' });
 
-  const row1 = [{ html: serviceSelectHtml }, { name: 'field', value: field || '', placeholder: 'Champ (ex: password)' }, { html: checkboxHtml }];
+  const row1 = [{ html: serviceSelectHtml }, { name: 'field', value: field || '', placeholder: 'Field (e.g. password)' }, { html: checkboxHtml }];
 
   const row2 = [
-    { name: 'value', value: value || '', placeholder: 'Valeur', type: isSecret !== false ? 'password' : 'text' },
+    { name: 'value', value: value || '', placeholder: 'Value', type: isSecret !== false ? 'password' : 'text' },
     { html: genBtnHtml },
   ];
 
@@ -153,7 +153,7 @@ function startSecretForm(container, render, { serviceId, field, value, isSecret 
         await vault.moveSecret(level, serviceId, field, svcId, newField);
       }
       await vault.setSecret(level, svcId, newField, newValue, newIsSecret);
-      showToast(isCreate ? 'Secret ajoute' : 'Secret modifie', 'success');
+      showToast(isCreate ? 'Secret added' : 'Secret updated', 'success');
       render();
     },
     onCancel: render,
@@ -183,19 +183,19 @@ function renderGeneratorModal() {
   return `
     <div id="generator-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div class="bg-white dark:bg-gray-900 rounded-xl p-6 w-full max-w-md border border-gray-200 dark:border-gray-700 shadow-xl">
-        <h3 class="text-sm font-semibold mb-4">Generateur de secrets</h3>
+        <h3 class="text-sm font-semibold mb-4">Secret generator</h3>
         <div class="space-y-3">
           <div>
             <label class="block text-xs text-gray-500 mb-1">Type</label>
             <select id="gen-type" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm">
-              <option value="password">Mot de passe</option>
-              <option value="base64">Token base64 (openssl rand -base64)</option>
+              <option value="password">Password</option>
+              <option value="base64">Base64 token (openssl rand -base64)</option>
               <option value="hex">Hex</option>
               <option value="uuid">UUID v4</option>
             </select>
           </div>
           <div id="gen-options-password">
-            <label class="block text-xs text-gray-500 mb-1">Longueur</label>
+            <label class="block text-xs text-gray-500 mb-1">Length</label>
             <div class="flex gap-2 items-center">
               <div class="flex gap-1">${[32, 64, 128, 256, 512].map(n => `<button data-gen-length="${n}" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:border-indigo-500 transition">${n}</button>`).join('')}</div>
               <input id="gen-length" type="number" min="1" max="1024" value="24" class="w-20 px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
@@ -208,7 +208,7 @@ function renderGeneratorModal() {
             </div>
           </div>
           <div id="gen-options-bytes" class="hidden">
-            <label class="block text-xs text-gray-500 mb-1">Octets</label>
+            <label class="block text-xs text-gray-500 mb-1">Bytes</label>
             <div class="flex gap-2 items-center">
               <div class="flex gap-1">${[32, 64, 128, 256, 512].map(n => `<button data-gen-bytes="${n}" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:border-indigo-500 transition">${n}</button>`).join('')}</div>
               <input id="gen-bytes" type="number" min="1" max="1024" value="32" class="w-20 px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
@@ -218,9 +218,9 @@ function renderGeneratorModal() {
             <span id="gen-preview">-</span>
           </div>
           <div class="flex justify-end gap-2">
-            ${renderButton('Regenerer', { id: 'gen-refresh', variant: 'secondary' })}
-            ${renderButton('Annuler', { id: 'gen-cancel', variant: 'secondary' })}
-            ${renderButton('Utiliser', { id: 'gen-use', variant: 'primary' })}
+            ${renderButton('Regenerate', { id: 'gen-refresh', variant: 'secondary' })}
+            ${renderButton('Cancel', { id: 'gen-cancel', variant: 'secondary' })}
+            ${renderButton('Use', { id: 'gen-use', variant: 'primary' })}
           </div>
         </div>
       </div>
@@ -321,7 +321,7 @@ export function bindSecrets(render) {
       if (!val) return;
       lastCopiedValue = val;
       navigator.clipboard.writeText(val);
-      showToast('Copie dans le presse-papier (efface dans 10s)', 'success');
+      showToast('Copied to clipboard (cleared in 10s)', 'success');
       setTimeout(() => {
         navigator.clipboard.readText().then(current => {
           if (current === val) navigator.clipboard.writeText('');

@@ -7,7 +7,7 @@ export function hasService(data, id) {
 }
 
 export function addService(data, id, label, comment = '') {
-  if (data.services[id]) throw new Error(`Le service "${id}" existe deja`);
+  if (data.services[id]) throw new Error(`Service "${id}" already exists`);
   data.services[id] = { label, comment };
   return data;
 }
@@ -32,7 +32,7 @@ export function renameServiceLabel(data, id, newLabel) {
 
 export function renameServiceId(data, oldId, newId) {
   if (!data.services[oldId] || oldId === newId) return data;
-  if (data.services[newId]) throw new Error(`Le service "${newId}" existe deja`);
+  if (data.services[newId]) throw new Error(`Service "${newId}" already exists`);
   data.services[newId] = data.services[oldId];
   delete data.services[oldId];
   const moveSecrets = (obj) => {

@@ -38,7 +38,7 @@ describe('environment-ops', () => {
       expect(data.templates.staging).toEqual({});
     });
     it('throws on duplicate', () => {
-      expect(() => addEnvironment(makeVault(), 'prod')).toThrow('existe deja');
+      expect(() => addEnvironment(makeVault(), 'prod')).toThrow('already exists');
     });
   });
 

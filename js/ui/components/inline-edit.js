@@ -28,7 +28,7 @@ export function startInlineEdit(container, { rows, onSave, onCancel, onInput, on
           }).join('')}
           ${rowIdx === lastRowIdx ? `
             ${renderButton('OK', { variant: 'success', cls: '!px-2 !py-1 !text-xs shrink-0', attrs: 'data-inline-save' })}
-            ${renderButton('Annuler', { variant: 'secondary', cls: '!px-2 !py-1 !text-xs shrink-0', attrs: 'data-inline-cancel' })}
+            ${renderButton('Cancel', { variant: 'secondary', cls: '!px-2 !py-1 !text-xs shrink-0', attrs: 'data-inline-cancel' })}
           ` : ''}
         </div>
       `).join('')}
