@@ -1,6 +1,6 @@
 // vault-schema.js — vault data structure and migration
 
-export const CURRENT_VERSION = 2;
+export const CURRENT_VERSION = 1;
 
 export function createEmpty() {
   return {
