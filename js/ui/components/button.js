@@ -2,7 +2,7 @@
 
 import { esc } from '../helpers.js';
 
-const base = 'transition focus:outline-none';
+const base = 'cursor-pointer transition focus:outline-none no-drag';
 
 const variants = {
   primary:   `${base} px-3 py-2 text-sm rounded-lg bg-indigo-600 text-white hover:bg-indigo-700`,

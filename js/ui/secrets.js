@@ -47,7 +47,11 @@ export function renderSecrets(render) {
 
   const level = getCurrentLevel();
   const secrets = vault.getSecretsAtLevel(level);
-  const secretEntries = Object.entries(secrets);
+  const secretEntries = Object.entries(secrets).sort(([a], [b]) => {
+    const labelA = data.services[a]?.label || a;
+    const labelB = data.services[b]?.label || b;
+    return labelA.localeCompare(labelB);
+  });
 
   // Populate in-memory store (clear previous)
   secretValueStore.clear();
@@ -93,7 +97,7 @@ export function renderSecrets(render) {
             <div class="p-4 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
               <h3 class="text-sm font-semibold text-indigo-500 mb-2">${esc(data.services[serviceId]?.label || serviceId)}</h3>
               <div class="space-y-1">
-                ${Object.entries(fields).map(([field, entry]) => {
+                ${Object.entries(fields).sort(([a], [b]) => a.localeCompare(b)).map(([field, entry]) => {
                   const key = `${serviceId}:${field}`;
                   return `
                 <div class="group flex items-center gap-3 text-sm py-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 -mx-2 px-2 rounded transition" data-edit-secret="${key}" data-is-secret="${entry.secret}">
@@ -116,7 +120,7 @@ export function renderSecrets(render) {
 function startSecretForm(container, render, { serviceId, field, value, isSecret } = {}) {
   const isCreate = !field;
   const data = vault.getData();
-  const services = Object.entries(data.services || {});
+  const services = Object.entries(data.services || {}).sort(([, a], [, b]) => a.label.localeCompare(b.label));
 
   const serviceSelectHtml = `<select name="serviceId" class="${INPUT_CLS} flex-1">
       <option value="">Service...</option>

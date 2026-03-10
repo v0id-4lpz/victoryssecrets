@@ -14,8 +14,28 @@ export function renderDeleteButton(dataAttr, value) {
 
 export function bindDeleteButtons(selector, handler) {
   document.querySelectorAll(selector).forEach(btn => {
+    let confirming = false;
+    const originalHtml = btn.innerHTML;
+
+    const reset = () => {
+      confirming = false;
+      btn.innerHTML = originalHtml;
+    };
+
     btn.onclick = async (e) => {
       e.stopPropagation();
+      if (!confirming) {
+        confirming = true;
+        btn.innerHTML = '<span class="text-xs">Confirm?</span>';
+        const outsideClick = (ev) => {
+          if (!btn.contains(ev.target)) {
+            reset();
+            document.removeEventListener('click', outsideClick, true);
+          }
+        };
+        document.addEventListener('click', outsideClick, true);
+        return;
+      }
       await handler(btn);
     };
   });

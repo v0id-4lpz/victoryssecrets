@@ -12,7 +12,7 @@ import { sanitizeId } from '../models/validators.js';
 
 export function renderEnvironments(render) {
   const data = vault.getData();
-  const envs = data.environments || [];
+  const envs = [...(data.environments || [])].sort((a, b) => a.localeCompare(b));
   return `
     <div class="max-w-3xl">
       ${renderSectionHeader('Environments', renderAddButton('btn-add-env'))}

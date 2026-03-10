@@ -23,7 +23,7 @@ export const INPUT_CLS = 'px-3 py-1 rounded-lg border border-indigo-500 bg-white
 
 // --- Shared UI helpers ---
 export function renderEnvOptions(envs, selected) {
-  return envs.map(e => `<option value="${e}" ${e === selected ? 'selected' : ''}>${esc(e)}</option>`).join('');
+  return [...envs].sort((a, b) => a.localeCompare(b)).map(e => `<option value="${e}" ${e === selected ? 'selected' : ''}>${esc(e)}</option>`).join('');
 }
 
 // --- Path formatting ---

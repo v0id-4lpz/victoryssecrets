@@ -4,3 +4,6 @@
 
 .drag-region { -webkit-app-region: drag; }
 .no-drag { -webkit-app-region: no-drag; }
+.drag-region input,
+.drag-region select,
+.drag-region a { -webkit-app-region: no-drag; }

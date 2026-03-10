@@ -186,6 +186,16 @@ export async function clearTemplate(envId) {
   await persist();
 }
 
+export async function replaceTemplate(envId, newTpl) {
+  templateOps.replaceTemplate(vaultData, envId, newTpl);
+  await persist();
+}
+
+export async function mergeTemplate(envId, incoming) {
+  templateOps.mergeTemplate(vaultData, envId, incoming);
+  await persist();
+}
+
 export function getTemplate(envId) {
   return templateOps.getTemplate(vaultData, envId);
 }

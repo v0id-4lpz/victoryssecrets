@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { createEmpty } from '../../js/models/vault-schema.js';
 import {
   setTemplateEntry, deleteTemplateEntry, clearTemplate, getTemplate,
-  parseEnvFile, buildServiceFieldTree,
+  parseTemplateText, serializeTemplate, replaceTemplate, mergeTemplate,
+  buildServiceFieldTree,
 } from '../../js/services/template-ops.js';
 
 function makeVault() {
@@ -71,29 +72,84 @@ describe('template-ops CRUD', () => {
   });
 });
 
-describe('parseEnvFile', () => {
-  it('parses standard .env lines', () => {
+describe('parseTemplateText', () => {
+  it('parses standard .env lines with values', () => {
     const text = 'DATABASE_URL=postgres://...\nREDIS_HOST=localhost\n';
-    expect(parseEnvFile(text)).toEqual(['DATABASE_URL', 'REDIS_HOST']);
+    expect(parseTemplateText(text)).toEqual({
+      DATABASE_URL: 'postgres://...',
+      REDIS_HOST: 'localhost',
+    });
   });
   it('skips comments and empty lines', () => {
     const text = '# comment\n\nKEY=value\n  \n# another\nOTHER=x';
-    expect(parseEnvFile(text)).toEqual(['KEY', 'OTHER']);
+    expect(parseTemplateText(text)).toEqual({ KEY: 'value', OTHER: 'x' });
   });
   it('handles Windows line endings', () => {
     const text = 'A=1\r\nB=2\r\n';
-    expect(parseEnvFile(text)).toEqual(['A', 'B']);
+    expect(parseTemplateText(text)).toEqual({ A: '1', B: '2' });
   });
   it('ignores lines without = sign', () => {
     const text = 'VALID=yes\ninvalid line\nALSO_VALID=ok';
-    expect(parseEnvFile(text)).toEqual(['VALID', 'ALSO_VALID']);
+    expect(parseTemplateText(text)).toEqual({ VALID: 'yes', ALSO_VALID: 'ok' });
   });
   it('returns empty for empty string', () => {
-    expect(parseEnvFile('')).toEqual([]);
+    expect(parseTemplateText('')).toEqual({});
   });
   it('rejects keys starting with numbers', () => {
     const text = '123BAD=x\nGOOD=y';
-    expect(parseEnvFile(text)).toEqual(['GOOD']);
+    expect(parseTemplateText(text)).toEqual({ GOOD: 'y' });
+  });
+  it('preserves values with = signs', () => {
+    const text = 'URL=postgres://host:5432/db?ssl=true';
+    expect(parseTemplateText(text)).toEqual({ URL: 'postgres://host:5432/db?ssl=true' });
+  });
+  it('keeps empty values', () => {
+    const text = 'EMPTY=\nFILLED=val';
+    expect(parseTemplateText(text)).toEqual({ EMPTY: '', FILLED: 'val' });
+  });
+  it('preserves ${ref} syntax in values', () => {
+    const text = 'DB=${pg.url}\nNAME=${_ENV_NAME}';
+    expect(parseTemplateText(text)).toEqual({ DB: '${pg.url}', NAME: '${_ENV_NAME}' });
+  });
+});
+
+describe('serializeTemplate', () => {
+  it('serializes template to KEY=value format', () => {
+    const tpl = { DATABASE_URL: '${pg.url}', REDIS: 'localhost' };
+    expect(serializeTemplate(tpl)).toBe('DATABASE_URL=${pg.url}\nREDIS=localhost');
+  });
+  it('returns empty string for empty template', () => {
+    expect(serializeTemplate({})).toBe('');
+  });
+  it('handles empty values', () => {
+    expect(serializeTemplate({ KEY: '' })).toBe('KEY=');
+  });
+});
+
+describe('replaceTemplate', () => {
+  it('replaces the entire template', () => {
+    const data = makeVault();
+    replaceTemplate(data, 'prod', { NEW_KEY: 'new_val' });
+    expect(data.templates.prod).toEqual({ NEW_KEY: 'new_val' });
+  });
+  it('creates env bucket if missing', () => {
+    const data = makeVault();
+    replaceTemplate(data, 'dev', { A: '1' });
+    expect(data.templates.dev).toEqual({ A: '1' });
+  });
+});
+
+describe('mergeTemplate', () => {
+  it('adds new keys without overwriting existing', () => {
+    const data = makeVault();
+    mergeTemplate(data, 'prod', { DATABASE_URL: 'overwrite_attempt', NEW_KEY: 'new_val' });
+    expect(data.templates.prod.DATABASE_URL).toBe('${pg.url}');
+    expect(data.templates.prod.NEW_KEY).toBe('new_val');
+  });
+  it('creates env bucket if missing', () => {
+    const data = makeVault();
+    mergeTemplate(data, 'dev', { A: '1' });
+    expect(data.templates.dev).toEqual({ A: '1' });
   });
 });
 

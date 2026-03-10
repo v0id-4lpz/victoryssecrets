@@ -12,7 +12,7 @@ import { sanitizeId, labelToId } from '../models/validators.js';
 
 export function renderServices(render) {
   const data = vault.getData();
-  const services = Object.entries(data.services || {});
+  const services = Object.entries(data.services || {}).sort(([, a], [, b]) => a.label.localeCompare(b.label));
   return `
     <div class="max-w-3xl">
       ${renderSectionHeader('Services', renderAddButton('btn-add-service'))}

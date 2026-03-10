@@ -15,7 +15,7 @@ import { renderButton } from './button.js';
  * @param {function} [options.onInput] - (name, value, getValues) =>
  * @param {function} [options.onReady] - (container) => called after DOM is built, for extra bindings
  */
-export function startInlineEdit(container, { rows, onSave, onCancel, onInput, onReady }) {
+export function startInlineEdit(container, { rows, onSave, onCancel, onInput, onReady, focusField }) {
   const lastRowIdx = rows.length - 1;
 
   container.innerHTML = `
@@ -35,8 +35,10 @@ export function startInlineEdit(container, { rows, onSave, onCancel, onInput, on
     </div>
   `;
 
-  const inputs = container.querySelectorAll('input:not([readonly])');
-  if (inputs.length) { inputs[0].focus(); inputs[0].select(); }
+  const focusTarget = focusField
+    ? container.querySelector(`input[name="${focusField}"]`)
+    : container.querySelector('input:not([readonly])');
+  if (focusTarget) { focusTarget.focus(); focusTarget.select(); }
 
   const getValues = () => {
     const values = {};
