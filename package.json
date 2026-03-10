@@ -30,14 +30,14 @@
     ],
     "afterPack": "./afterPack.js",
     "dmg": {
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
+      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
     },
     "mac": {
       "target": [
         "dmg",
         "zip"
       ],
-      "artifactName": "${productName}-${version}-${arch}-portable.${ext}",
+      "artifactName": "${productName}-${version}-${os}-${arch}-portable.${ext}",
       "category": "public.app-category.developer-tools",
       "identity": null,
       "type": "development",
@@ -51,20 +51,20 @@
       "icon": "assets/icon.ico"
     },
     "nsis": {
-      "artifactName": "${productName}-${version}.${ext}"
+      "artifactName": "${productName}-${version}-${os}.${ext}"
     },
     "portable": {
-      "artifactName": "${productName}-${version}-portable.${ext}"
+      "artifactName": "${productName}-${version}-${os}-portable.${ext}"
     },
     "appImage": {
-      "artifactName": "${productName}-${version}.${ext}"
+      "artifactName": "${productName}-${version}-${os}.${ext}"
     },
     "linux": {
       "target": [
         "AppImage",
         "tar.gz"
       ],
-      "artifactName": "${productName}-${version}-portable.${ext}"
+      "artifactName": "${productName}-${version}-${os}-portable.${ext}"
     }
   },
   "devDependencies": {
