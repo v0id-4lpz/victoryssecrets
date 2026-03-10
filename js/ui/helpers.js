@@ -4,10 +4,12 @@
 export let currentSection = 'services';
 export let selectedEnv = null;
 export let secretLevelScope = 'global';
+export let updateInfo = null;
 
 export function setCurrentSection(v) { currentSection = v; }
 export function setSelectedEnv(v) { selectedEnv = v; }
 export function setSecretLevelScope(v) { secretLevelScope = v; }
+export function setUpdateInfo(v) { updateInfo = v; }
 
 // --- HTML escape ---
 export function esc(str) {

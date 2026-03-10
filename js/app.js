@@ -6,7 +6,7 @@ import { initTheme, toggleTheme } from './ui/theme.js';
 import { renderButton } from './ui/components/button.js';
 import { icons } from './ui/components/icon.js';
 import { showToast } from './ui/components/toast.js';
-import { currentSection, setCurrentSection, esc, shortenPath } from './ui/helpers.js';
+import { currentSection, setCurrentSection, esc, shortenPath, updateInfo, setUpdateInfo } from './ui/helpers.js';
 import { renderWelcome, bindWelcome } from './ui/welcome.js';
 import { renderServices, bindServices } from './ui/services.js';
 import { renderEnvironments, bindEnvironments } from './ui/environments.js';
@@ -137,6 +137,7 @@ function renderMain() {
         <div class="pl-16 flex items-baseline gap-3 min-w-0">
           <h1 class="text-xl font-bold shrink-0">Victory's Secrets</h1>
           <span class="text-xs text-gray-400 truncate">${shortenPath(getFilePath())}</span>
+          ${updateInfo ? `<a id="update-link-header" href="#" class="shrink-0 no-drag inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition">${icons.arrowUp('w-3 h-3')} v${esc(updateInfo.version)}</a>` : ''}
         </div>
         <div class="no-drag flex items-center gap-3">
           ${renderButton(icons.search(), { id: 'btn-search', variant: 'icon', title: 'Search (Ctrl+K)' })}
@@ -198,6 +199,9 @@ function bindMain() {
       document.getElementById('privacy-overlay')?.classList.add('hidden');
     });
   }
+  const updateLink = document.getElementById('update-link-header');
+  if (updateLink) updateLink.onclick = (e) => { e.preventDefault(); window.electronAPI?.openExternal(updateInfo.url); };
+
   document.getElementById('btn-search').onclick = () => {
     const modal = document.getElementById('search-modal');
     modal.classList.remove('hidden');
@@ -234,3 +238,9 @@ function render() {
 // --- Init ---
 initTheme();
 render();
+
+if (window.electronAPI?.checkUpdate) {
+  window.electronAPI.checkUpdate().then(info => {
+    if (info) { setUpdateInfo(info); render(); }
+  });
+}

@@ -1,8 +1,11 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, net, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
 const MAX_VAULT_SIZE = 10 * 1024 * 1024; // 10 MB
+const APP_VERSION = require('./package.json').version;
+const VERSION_GIST_URL = 'https://gist.githubusercontent.com/v0id-4lpz/d3714c345c34713e084fde36be1ad2ab/raw/vs-version';
+const RELEASES_URL = 'https://github.com/v0id-4lpz/victoryssecrets/releases';
 const VAULT_EXTENSION = '.vsv';
 
 let mainWindow;
@@ -148,7 +151,7 @@ ipcMain.handle('file:import-env', async () => {
   try {
     const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
       title: 'Import a .env file',
-      filters: [{ name: 'Tous les fichiers', extensions: ['*'] }],
+      filters: [{ name: 'All files', extensions: ['*'] }],
       properties: ['openFile', 'showHiddenFiles'],
     });
     if (canceled || filePaths.length === 0) return null;
@@ -156,4 +159,29 @@ ipcMain.handle('file:import-env', async () => {
   } catch (e) {
     throw new Error(`Failed to import env file: ${e.message}`);
   }
+});
+
+// --- IPC: Update check ---
+
+ipcMain.handle('app:check-update', async () => {
+  try {
+    const response = await net.fetch(VERSION_GIST_URL);
+    if (!response.ok) return null;
+    const remoteVersion = (await response.text()).trim();
+    const local = APP_VERSION.replace(/^v/, '').split('.').map(Number);
+    const remote = remoteVersion.replace(/^v/, '').split('.').map(Number);
+    for (let i = 0; i < 3; i++) {
+      if ((remote[i] || 0) > (local[i] || 0)) return { version: remoteVersion, url: `${RELEASES_URL}/tag/v${remoteVersion}` };
+      if ((remote[i] || 0) < (local[i] || 0)) return null;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+});
+
+ipcMain.handle('app:open-external', async (_event, url) => {
+  if (typeof url !== 'string' || !url.startsWith('https://')) return false;
+  await shell.openExternal(url);
+  return true;
 });

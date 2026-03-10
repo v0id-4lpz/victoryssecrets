@@ -8,7 +8,7 @@ import { renderButton, setButtonLoading } from './components/button.js';
 import { renderDeleteButton } from './components/delete-button.js';
 import { icons } from './components/icon.js';
 import { MIN_PASSWORD_LENGTH, renderStrengthBar, updateStrengthBar } from './components/password-strength.js';
-import { fileName, dirName } from './helpers.js';
+import { fileName, dirName, esc, updateInfo } from './helpers.js';
 
 let pendingAction = null; // 'create' | 'open'
 let pendingBuffer = null;
@@ -44,6 +44,7 @@ export function renderWelcome() {
         <div class="text-center">
           <h1 class="text-4xl font-bold text-gray-900 dark:text-white">Victory's Secrets</h1>
           <p class="mt-2 text-gray-500 dark:text-gray-400">Local secrets manager</p>
+          ${updateInfo ? `<a id="update-link-welcome" href="#" class="inline-flex items-center gap-1.5 mt-2 text-xs text-indigo-500 hover:text-indigo-400 transition">${icons.arrowUp('w-3.5 h-3.5')} v${esc(updateInfo.version)} available</a>` : ''}
         </div>
         <div class="space-y-4">
           ${renderButton('Create a new vault', { id: 'btn-create', variant: 'primary', cls: 'w-full flex justify-center py-3 !text-sm font-medium' })}
@@ -83,6 +84,8 @@ function showPasswordForm(action, label) {
 
 export function bindWelcome(render) {
   document.getElementById('btn-theme-welcome').onclick = toggleTheme;
+  const updateLink = document.getElementById('update-link-welcome');
+  if (updateLink) updateLink.onclick = (e) => { e.preventDefault(); window.electronAPI?.openExternal(updateInfo.url); };
 
   document.getElementById('btn-create').onclick = async () => {
     try {
