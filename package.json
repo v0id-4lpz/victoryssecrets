@@ -51,7 +51,7 @@
       "icon": "assets/icon.ico"
     },
     "nsis": {
-      "artifactName": "${productName}-${version}-setup.${ext}"
+      "artifactName": "${productName}-${version}.${ext}"
     },
     "portable": {
       "artifactName": "${productName}-${version}-portable.${ext}"
