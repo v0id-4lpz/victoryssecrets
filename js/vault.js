@@ -231,13 +231,15 @@ function refactorTemplates(pattern, replacement) {
   }
 }
 
-export async function renameSecretField(level, serviceId, oldField, newField) {
+export async function moveSecret(level, oldServiceId, oldField, newServiceId, newField) {
   const target = getSecretsAtLevel(level);
-  if (!target[serviceId]?.[oldField]) return;
-  target[serviceId][newField] = target[serviceId][oldField];
-  delete target[serviceId][oldField];
-  // Refactor all templates
-  refactorTemplates(`\${${serviceId}.${oldField}}`, `\${${serviceId}.${newField}}`);
+  if (!target[oldServiceId]?.[oldField]) return;
+  const entry = target[oldServiceId][oldField];
+  delete target[oldServiceId][oldField];
+  if (Object.keys(target[oldServiceId]).length === 0) delete target[oldServiceId];
+  if (!target[newServiceId]) target[newServiceId] = {};
+  target[newServiceId][newField] = entry;
+  refactorTemplates(`\${${oldServiceId}.${oldField}}`, `\${${newServiceId}.${newField}}`);
   await persist();
 }
 

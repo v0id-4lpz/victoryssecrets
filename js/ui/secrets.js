@@ -84,12 +84,10 @@ function startSecretForm(container, render, { serviceId, field, value, isSecret 
   const data = vault.getData();
   const services = Object.entries(data.services || {});
 
-  const serviceSelectHtml = isCreate
-    ? `<select name="serviceId" class="${selectCls} flex-1">
-        <option value="">Service...</option>
-        ${services.map(([id, s]) => `<option value="${id}">${esc(s.label)}</option>`).join('')}
-       </select>`
-    : '';
+  const serviceSelectHtml = `<select name="serviceId" class="${selectCls} flex-1">
+      <option value="">Service...</option>
+      ${services.map(([id, s]) => `<option value="${id}" ${id === serviceId ? 'selected' : ''}>${esc(s.label)}</option>`).join('')}
+     </select>`;
 
   const checkboxHtml = `<label class="flex items-center gap-1 text-xs text-gray-500 cursor-pointer shrink-0">
     <input type="checkbox" name="isSecret" ${isSecret !== false ? 'checked' : ''} class="rounded border-gray-300 dark:border-gray-600" />
@@ -98,9 +96,7 @@ function startSecretForm(container, render, { serviceId, field, value, isSecret 
 
   const genBtnHtml = renderButton(icons.refresh(), { variant: 'secondary', cls: '!px-2 !py-1 shrink-0', attrs: 'data-inline-gen', title: 'Generer' });
 
-  const row1 = isCreate
-    ? [{ html: serviceSelectHtml }, { name: 'field', value: '', placeholder: 'Champ (ex: password)' }, { html: checkboxHtml }]
-    : [{ name: 'field', value: field, placeholder: 'Champ' }, { html: checkboxHtml }];
+  const row1 = [{ html: serviceSelectHtml }, { name: 'field', value: field || '', placeholder: 'Champ (ex: password)' }, { html: checkboxHtml }];
 
   const row2 = [
     { name: 'value', value: value || '', placeholder: 'Valeur', type: isSecret !== false ? 'password' : 'text' },
@@ -110,7 +106,7 @@ function startSecretForm(container, render, { serviceId, field, value, isSecret 
   startInlineEdit(container, {
     rows: [row1, row2],
     onSave: async (values) => {
-      const svcId = isCreate ? container.querySelector('select[name="serviceId"]')?.value : serviceId;
+      const svcId = container.querySelector('select[name="serviceId"]')?.value;
       const newField = values.field;
       const newValue = values.value;
       const newIsSecret = values.isSecret;
@@ -119,8 +115,8 @@ function startSecretForm(container, render, { serviceId, field, value, isSecret 
       const level = getCurrentLevel();
       if (secretLevelScope === 'env' && !selectedEnv) return;
 
-      if (!isCreate && newField !== field) {
-        await vault.renameSecretField(level, serviceId, field, newField);
+      if (!isCreate && (svcId !== serviceId || newField !== field)) {
+        await vault.moveSecret(level, serviceId, field, svcId, newField);
       }
       await vault.setSecret(level, svcId, newField, newValue, newIsSecret);
       render();
