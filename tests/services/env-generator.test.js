@@ -95,4 +95,36 @@ describe('generateEnv', () => {
     const { output } = generateEnv(makeVault(), 'prod');
     expect(output.endsWith('\n')).toBe(true);
   });
+
+  it('returns entries with source info', () => {
+    const { entries } = generateEnv(makeVault(), 'prod');
+    const dbEntry = entries.find(e => e.key === 'DATABASE_URL');
+    expect(dbEntry.value).toBe('postgres://prod');
+    expect(dbEntry.source).toBe('prod');
+
+    const passEntry = entries.find(e => e.key === 'DB_PASS');
+    expect(passEntry.value).toBe('globalpass');
+    expect(passEntry.source).toBe('Global');
+
+    const envEntry = entries.find(e => e.key === 'ENV_NAME');
+    expect(envEntry.source).toBe('auto');
+
+    const staticEntry = entries.find(e => e.key === 'STATIC_VAL');
+    expect(staticEntry.source).toBe('static');
+  });
+
+  it('entries have null source for unresolved refs', () => {
+    const data = makeVault();
+    data.templates.main.MISSING = '${mongo.uri}';
+    const { entries } = generateEnv(data, 'prod');
+    const missing = entries.find(e => e.key === 'MISSING');
+    expect(missing.source).toBeNull();
+  });
+
+  it('returns empty entries for missing template', () => {
+    const data = createEmpty();
+    data.templates = {};
+    const { entries } = generateEnv(data, 'staging');
+    expect(entries).toEqual([]);
+  });
 });
