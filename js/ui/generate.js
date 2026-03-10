@@ -3,6 +3,7 @@
 import * as vault from '../vault.js';
 import { generateEnv } from '../template.js';
 import { esc, selectedEnv, setSelectedEnv } from './helpers.js';
+import { renderButton } from './components/button.js';
 
 export function renderGenerate(render) {
   const data = vault.getData();
@@ -20,8 +21,8 @@ export function renderGenerate(render) {
             ${envOptions}
           </select>
         </div>
-        <button id="btn-generate" class="px-4 py-2 text-sm rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition">Generer</button>
-        <button id="btn-download-env" class="hidden px-4 py-2 text-sm rounded-lg bg-green-600 text-white hover:bg-green-700 transition">Telecharger .env</button>
+        ${renderButton('Generer', { id: 'btn-generate', variant: 'primary' })}
+        ${renderButton('Telecharger .env', { id: 'btn-download-env', variant: 'success', cls: 'hidden' })}
       </div>
       <div id="gen-warnings" class="hidden mb-3 p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-sm text-yellow-700 dark:text-yellow-400"></div>
       <pre id="gen-output" class="hidden p-4 rounded-lg bg-gray-900 text-green-400 font-mono text-sm overflow-x-auto whitespace-pre border border-gray-700"></pre>

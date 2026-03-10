@@ -100,6 +100,21 @@ export async function addEnvironment(envId) {
   await persist();
 }
 
+export async function renameEnvironment(oldId, newId) {
+  const idx = vaultData.environments.indexOf(oldId);
+  if (idx === -1 || vaultData.environments.includes(newId)) return;
+  vaultData.environments[idx] = newId;
+  if (vaultData.secrets.envs[oldId]) {
+    vaultData.secrets.envs[newId] = vaultData.secrets.envs[oldId];
+    delete vaultData.secrets.envs[oldId];
+  }
+  if (vaultData.templates[oldId]) {
+    vaultData.templates[newId] = vaultData.templates[oldId];
+    delete vaultData.templates[oldId];
+  }
+  await persist();
+}
+
 export async function deleteEnvironment(envId) {
   const idx = vaultData.environments.indexOf(envId);
   if (idx !== -1) vaultData.environments.splice(idx, 1);
@@ -150,6 +165,13 @@ export async function setTemplateEntry(envId, key, value) {
 export async function deleteTemplateEntry(envId, key) {
   delete vaultData.templates?.[envId]?.[key];
   await persist();
+}
+
+export async function clearTemplate(envId) {
+  if (vaultData.templates?.[envId]) {
+    vaultData.templates[envId] = {};
+    await persist();
+  }
 }
 
 export function getTemplate(envId) {

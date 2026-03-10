@@ -2,6 +2,8 @@
 
 import * as vault from './vault.js';
 import { initTheme, toggleTheme } from './ui/theme.js';
+import { renderButton } from './ui/components/button.js';
+import { icons } from './ui/components/icon.js';
 import { currentSection, setCurrentSection } from './ui/helpers.js';
 import { renderWelcome, bindWelcome } from './ui/welcome.js';
 import { renderServices, bindServices } from './ui/services.js';
@@ -36,12 +38,8 @@ function renderMain() {
       <header class="drag-region bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-3 flex items-center justify-between">
         <h1 class="text-xl font-bold pl-16">Victory's Secrets</h1>
         <div class="no-drag flex items-center gap-3">
-          <button id="btn-theme" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition" title="Toggle theme">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-          </button>
-          <button id="btn-lock" class="px-3 py-1.5 text-sm rounded-lg bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition">
-            Verrouiller
-          </button>
+          ${renderButton(icons.theme(), { id: 'btn-theme', variant: 'icon', title: 'Toggle theme' })}
+          ${renderButton('Verrouiller', { id: 'btn-lock', cls: 'px-3 py-1.5 text-sm rounded-lg bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50' })}
         </div>
       </header>
 

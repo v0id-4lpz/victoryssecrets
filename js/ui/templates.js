@@ -1,7 +1,23 @@
 // templates.js — templates section + value picker
 
 import * as vault from '../vault.js';
+import { importEnvFile } from '../storage.js';
 import { esc, selectedEnv, setSelectedEnv } from './helpers.js';
+import { renderButton } from './components/button.js';
+import { renderDeleteButton, bindDeleteButtons } from './components/delete-button.js';
+import { bindEditableRows } from './components/editable-row.js';
+import { renderEmptyState } from './components/empty-state.js';
+
+function parseEnvFile(text) {
+  const keys = [];
+  for (const line of text.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const match = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)=/);
+    if (match) keys.push(match[1]);
+  }
+  return keys;
+}
 
 function buildServiceFieldTree() {
   const data = vault.getData();
@@ -59,7 +75,7 @@ function renderValuePicker() {
             <div class="px-0 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Valeur libre</div>
             <div class="flex gap-1">
               <input id="tpl-free-value" type="text" placeholder="Saisir une valeur..." class="flex-1 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-              <button id="tpl-free-value-ok" class="px-2 py-1 text-xs rounded bg-green-600 text-white hover:bg-green-700 transition">OK</button>
+              ${renderButton('OK', { id: 'tpl-free-value-ok', variant: 'success', cls: '!px-2 !py-1 !text-xs' })}
             </div>
           </div>
         </div>
@@ -94,20 +110,24 @@ export function renderTemplates(render) {
       <div class="mt-4 p-4 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
         <div class="flex items-center justify-between mb-3">
           <h3 class="text-sm font-semibold">Mapping</h3>
-          <button id="btn-add-tpl-entry" class="text-xs text-indigo-500 hover:text-indigo-400 transition">+ Ajouter</button>
+          <div class="flex gap-3">
+            ${renderButton('Importer .env', { id: 'btn-import-env', variant: 'ghost' })}
+            ${renderButton('+ Ajouter', { id: 'btn-add-tpl-entry', variant: 'ghost' })}
+            ${entries.length > 0 ? renderButton('Vider', { id: 'btn-clear-tpl', variant: 'danger' }) : ''}
+          </div>
         </div>
         <div id="tpl-entry-form" class="hidden mb-3 flex gap-2 items-start">
           <input id="tpl-key" type="text" placeholder="ENV_VAR_NAME" class="w-48 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
           ${renderValuePicker()}
-          <button id="btn-save-tpl-entry" class="px-2 py-1 text-xs rounded bg-green-600 text-white hover:bg-green-700 transition shrink-0">OK</button>
+          ${renderButton('OK', { id: 'btn-save-tpl-entry', variant: 'success', cls: 'shrink-0 !px-2 !py-1 !text-xs' })}
         </div>
         ${entries.length === 0
           ? '<p class="text-gray-400 text-xs">Aucune entree.</p>'
           : `<div class="space-y-1">${entries.map(([key, val]) => `
-            <div class="flex items-center gap-3 text-sm py-1 font-mono">
-              <span class="w-48 text-gray-300 shrink-0">${esc(key)}</span>
-              <span class="flex-1 text-gray-500">${esc(val)}</span>
-              <button data-delete-tpl="${key}" class="text-red-400 hover:text-red-600 transition">&times;</button>
+            <div class="group flex items-center gap-3 text-sm py-1 font-mono cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 -mx-2 px-2 rounded transition" data-edit-tpl="${esc(key)}">
+              <span class="w-48 text-gray-300 shrink-0 pointer-events-none">${esc(key)}</span>
+              <span class="flex-1 ${val ? 'text-gray-500' : 'text-gray-600 italic'} pointer-events-none">${val ? esc(val) : 'Non défini'}</span>
+              ${renderDeleteButton('data-delete-tpl', key)}
             </div>`).join('')}</div>`
         }
       </div>`;
@@ -133,6 +153,31 @@ export function bindTemplates(render) {
   document.getElementById('tpl-env')?.addEventListener('change', (e) => {
     setSelectedEnv(e.target.value || null);
     render();
+  });
+  document.getElementById('btn-import-env')?.addEventListener('click', async () => {
+    try {
+      const text = await importEnvFile();
+      if (!text) return;
+      const keys = parseEnvFile(text);
+      const existing = vault.getTemplate(selectedEnv);
+      let added = 0;
+      for (const key of keys) {
+        if (!existing[key]) {
+          await vault.setTemplateEntry(selectedEnv, key, '');
+          added++;
+        }
+      }
+      if (added > 0) render();
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+      console.error('Import .env failed:', e);
+    }
+  });
+  document.getElementById('btn-clear-tpl')?.addEventListener('click', async () => {
+    if (selectedEnv && confirm('Vider tout le template ?')) {
+      await vault.clearTemplate(selectedEnv);
+      render();
+    }
   });
   document.getElementById('btn-add-tpl-entry')?.addEventListener('click', () => {
     document.getElementById('tpl-entry-form').classList.toggle('hidden');
@@ -184,19 +229,40 @@ export function bindTemplates(render) {
   }
 
   document.getElementById('btn-save-tpl-entry')?.addEventListener('click', async () => {
-    const key = document.getElementById('tpl-key').value.trim();
+    const keyInput = document.getElementById('tpl-key');
+    const key = keyInput.value.trim();
     const value = document.getElementById('tpl-value').value.trim();
     if (key && value && selectedEnv) {
       await vault.setTemplateEntry(selectedEnv, key, value);
+      keyInput.readOnly = false;
+      keyInput.classList.remove('opacity-50');
       render();
     }
   });
-  document.querySelectorAll('[data-delete-tpl]').forEach(btn => {
-    btn.onclick = async () => {
-      if (selectedEnv) {
-        await vault.deleteTemplateEntry(selectedEnv, btn.dataset.deleteTpl);
-        render();
-      }
-    };
+
+  // Edit template entry value — whole row clickable
+  bindEditableRows('[data-edit-tpl]', (row) => {
+    const key = row.dataset.editTpl;
+    const form = document.getElementById('tpl-entry-form');
+    form.classList.remove('hidden');
+    const keyInput = document.getElementById('tpl-key');
+    keyInput.value = key;
+    keyInput.readOnly = true;
+    keyInput.classList.add('opacity-50');
+    const pickerBtnEl = document.getElementById('tpl-value-btn');
+    if (pickerBtnEl) {
+      pickerBtnEl.textContent = 'Choisir une valeur...';
+      pickerBtnEl.classList.add('text-gray-400');
+      pickerBtnEl.classList.remove('text-white');
+    }
+    document.getElementById('tpl-value').value = '';
+    form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, ['[data-delete-tpl]']);
+
+  bindDeleteButtons('[data-delete-tpl]', async (btn) => {
+    if (selectedEnv) {
+      await vault.deleteTemplateEntry(selectedEnv, btn.dataset.deleteTpl);
+      render();
+    }
   });
 }

@@ -41,6 +41,30 @@ export async function openFile() {
   }
 }
 
+export function getFilePath() {
+  return currentFilePath;
+}
+
+export async function openFilePath(filePath) {
+  if (!isElectron) throw new Error('Not supported in browser');
+  const result = await window.electronAPI.openFilePath(filePath);
+  if (!result) throw new Error('File not found');
+  currentFilePath = result.filePath;
+  return result.buffer;
+}
+
+export async function importEnvFile() {
+  if (isElectron) {
+    return window.electronAPI.importEnv();
+  } else {
+    const [handle] = await window.showOpenFilePicker({
+      types: [{ description: 'Fichiers .env', accept: { 'text/plain': ['.env'] } }],
+    });
+    const file = await handle.getFile();
+    return file.text();
+  }
+}
+
 export async function saveFile(data) {
   if (isElectron) {
     if (!currentFilePath) throw new Error('No file path');

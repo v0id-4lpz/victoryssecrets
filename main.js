@@ -62,3 +62,19 @@ ipcMain.handle('file:save', async (_event, { filePath, data }) => {
   fs.writeFileSync(filePath, Buffer.from(data));
   return true;
 });
+
+ipcMain.handle('file:open-path', async (_event, filePath) => {
+  if (!fs.existsSync(filePath)) return null;
+  const data = fs.readFileSync(filePath);
+  return { filePath, buffer: data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) };
+});
+
+ipcMain.handle('file:import-env', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+    title: 'Importer un fichier .env',
+    filters: [{ name: 'Tous les fichiers', extensions: ['*'] }],
+    properties: ['openFile', 'showHiddenFiles'],
+  });
+  if (canceled || filePaths.length === 0) return null;
+  return fs.readFileSync(filePaths[0], 'utf-8');
+});

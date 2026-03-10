@@ -2,7 +2,9 @@
 # Guidelines
 
 ## UI
-Utiliser Tailwind
+
+- Utiliser Tailwind
 
 ## GIT
-Jamais de Co-Authored-By
+
+- Jamais de Co-Authored-By
