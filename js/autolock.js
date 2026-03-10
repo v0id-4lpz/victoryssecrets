@@ -1,7 +1,6 @@
 // autolock.js — auto-lock vault after inactivity
 
-const AUTOLOCK_MINUTES = 10;
-
+let autolockMinutes = 10;
 let timer = null;
 let onLockCallback = null;
 
@@ -10,8 +9,13 @@ function resetTimer() {
   if (onLockCallback) {
     timer = setTimeout(() => {
       onLockCallback();
-    }, AUTOLOCK_MINUTES * 60 * 1000);
+    }, autolockMinutes * 60 * 1000);
   }
+}
+
+export function setAutolockMinutes(minutes) {
+  autolockMinutes = minutes;
+  if (onLockCallback) resetTimer();
 }
 
 export function startAutoLock(onLock) {

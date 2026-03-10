@@ -8,12 +8,17 @@ La sécurité est une priorité absolue de l'app.
 - **Chiffrement** : AES-256-GCM + Argon2id (256MB, 3 itérations, parallélisme 4)
 - **Mot de passe jamais stocké** : seule la `CryptoKey` non-extractable (Web Crypto API) est conservée en mémoire — le password est oublié après dérivation
 - **Secrets jamais dans le DOM** : les valeurs sensibles sont stockées dans un `Map` JS, jamais dans des attributs `data-*`
-- **Clipboard auto-clear** : le presse-papier est nettoyé 10s après copie d'un secret
-- **Auto-lock** : verrouillage automatique après 10 min d'inactivité, efface `CryptoKey` + données
+- **Clipboard auto-clear** : le presse-papier est nettoyé 10s après copie d'un secret + vidé au verrouillage
+- **Auto-lock** : verrouillage automatique après 10 min d'inactivité, efface `CryptoKey` + données + clipboard
+- **Privacy overlay** : flou sur l'écran quand la fenêtre perd le focus
+- **CSP** : Content Security Policy stricte — `script-src 'self'`, pas de CDN JS
+- **IPC hardening** : validation des paths (extension `.vsv`, anti-traversal), limite taille fichier 10MB
+- **Mutex persist** : les écritures sont sérialisées pour éviter les corruptions
+- **JSON corrompu** : try/catch explicite avec message clair au lieu de crash
 
 ## UI
 
-- Utiliser Tailwind
+- Tailwind v4 local (`npm run css` pour build, `npm run css:watch` pour dev)
 - Vanilla JS — composants `renderX()` (HTML string) + `bindX(render)` (event handlers)
 - Formulaires inline via `startInlineEdit(container, { rows, onSave, onCancel, onInput, onReady })`
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CURRENT_VERSION, createEmpty, ensureStructure } from '../../js/models/vault-schema.js';
+import { CURRENT_VERSION, DEFAULT_SETTINGS, createEmpty, ensureStructure } from '../../js/models/vault-schema.js';
 
 describe('vault-schema', () => {
   describe('createEmpty', () => {
@@ -28,6 +28,11 @@ describe('vault-schema', () => {
     it('has empty templates', () => {
       expect(createEmpty().templates).toEqual({});
     });
+
+    it('has default settings', () => {
+      const v = createEmpty();
+      expect(v.settings).toEqual(DEFAULT_SETTINGS);
+    });
   });
 
   describe('ensureStructure', () => {
@@ -38,6 +43,12 @@ describe('vault-schema', () => {
       expect(data.environmentMeta).toEqual({});
       expect(data.secrets).toEqual({ global: {}, envs: {} });
       expect(data.templates).toEqual({});
+      expect(data.settings).toEqual(DEFAULT_SETTINGS);
+    });
+
+    it('fills missing settings fields on partial settings', () => {
+      const data = ensureStructure({ settings: {} });
+      expect(data.settings.autolockMinutes).toBe(DEFAULT_SETTINGS.autolockMinutes);
     });
 
     it('preserves existing data', () => {

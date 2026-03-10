@@ -7,10 +7,12 @@ import * as serviceOps from './services/service-ops.js';
 import * as environmentOps from './services/environment-ops.js';
 import * as secretOps from './services/secret-ops.js';
 import * as templateOps from './services/template-ops.js';
+import * as settingsOps from './services/settings-ops.js';
 
 let vaultData = null;
 let cryptoKey = null;  // non-extractable CryptoKey — password never stored
 let keySalt = null;
+let persistLock = null; // mutex for persist()
 
 // --- State ---
 
@@ -42,10 +44,19 @@ export async function open(buffer, password) {
 }
 
 export async function persist() {
+  // Mutex: wait for any in-flight persist to finish before starting
+  while (persistLock) await persistLock;
   if (!vaultData || !cryptoKey) throw new Error('Vault not open');
   if (!hasFile()) throw new Error('No file handle');
-  const encrypted = await encrypt(vaultData, cryptoKey, keySalt);
-  await saveFile(encrypted);
+  let resolve;
+  persistLock = new Promise(r => { resolve = r; });
+  try {
+    const encrypted = await encrypt(vaultData, cryptoKey, keySalt);
+    await saveFile(encrypted);
+  } finally {
+    persistLock = null;
+    resolve();
+  }
 }
 
 export async function changePassword(currentPassword, newPassword) {
@@ -177,4 +188,15 @@ export async function clearTemplate(envId) {
 
 export function getTemplate(envId) {
   return templateOps.getTemplate(vaultData, envId);
+}
+
+// --- Settings ---
+
+export function getSettings() {
+  return settingsOps.getSettings(vaultData);
+}
+
+export async function setAutolockMinutes(minutes) {
+  settingsOps.setAutolockMinutes(vaultData, minutes);
+  await persist();
 }

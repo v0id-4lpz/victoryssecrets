@@ -4,12 +4,14 @@
   "description": "Local secrets & config manager",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
-    "dev": "electron . --dev",
-    "build": "electron-builder",
-    "build:mac": "electron-builder --mac",
-    "build:win": "electron-builder --win",
-    "build:linux": "electron-builder --linux",
+    "css": "tailwindcss -i css/app.css -o css/dist.css --minify",
+    "css:watch": "tailwindcss -i css/app.css -o css/dist.css --watch",
+    "start": "npm run css && electron .",
+    "dev": "npm run css && electron . --dev",
+    "build": "npm run css && electron-builder",
+    "build:mac": "npm run css && electron-builder --mac",
+    "build:win": "npm run css && electron-builder --win",
+    "build:linux": "npm run css && electron-builder --linux",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -23,7 +25,8 @@
       "main.js",
       "preload.js",
       "index.html",
-      "js/**/*"
+      "js/**/*",
+      "css/dist.css"
     ],
     "afterPack": "./afterPack.js",
     "mac": {
@@ -51,8 +54,10 @@
     }
   },
   "devDependencies": {
+    "@tailwindcss/cli": "^4.2.1",
     "electron": "^40.8.0",
     "electron-builder": "^26.8.1",
+    "tailwindcss": "^4.2.1",
     "vitest": "^4.0.18"
   },
   "dependencies": {

@@ -11,10 +11,10 @@ import { currentSection, setCurrentSection, esc, shortenPath } from './ui/helper
 import { renderWelcome, bindWelcome } from './ui/welcome.js';
 import { renderServices, bindServices } from './ui/services.js';
 import { renderEnvironments, bindEnvironments } from './ui/environments.js';
-import { renderSecrets, bindSecrets } from './ui/secrets.js';
+import { renderSecrets, bindSecrets, clearSecretStore } from './ui/secrets.js';
 import { renderTemplates, bindTemplates } from './ui/templates.js';
 import { renderGenerate, bindGenerate } from './ui/generate.js';
-import { startAutoLock, stopAutoLock } from './autolock.js';
+import { startAutoLock, stopAutoLock, setAutolockMinutes } from './autolock.js';
 import { buildSearchIndex as buildIndex, filterSearch as searchFilter } from './services/search.js';
 import { getEnvironmentComment } from './services/environment-ops.js';
 
@@ -53,6 +53,53 @@ function renderChangePasswordModal() {
         <div class="flex justify-end gap-2">
           ${renderButton('Annuler', { id: 'chpw-cancel', variant: 'secondary' })}
           ${renderButton('Changer', { id: 'chpw-submit', variant: 'primary' })}
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderSettingsModal() {
+  const settings = vault.getSettings();
+  const data = vault.getData();
+  const serviceCount = Object.keys(data.services).length;
+  const envCount = data.environments.length;
+  const secretCount = Object.values(data.secrets.global).reduce((n, svc) => n + Object.keys(svc).length, 0)
+    + Object.values(data.secrets.envs).reduce((n, env) => n + Object.values(env).reduce((m, svc) => m + Object.keys(svc).length, 0), 0);
+  const templateCount = Object.keys(data.templates).length;
+
+  return `
+    <div id="settings-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div class="bg-white dark:bg-gray-900 rounded-xl p-6 w-full max-w-sm border border-gray-200 dark:border-gray-700 shadow-xl space-y-5">
+        <h3 class="text-sm font-semibold">Parametres</h3>
+
+        <div class="space-y-3">
+          <h4 class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Vault</h4>
+          <div class="grid grid-cols-2 gap-2 text-sm">
+            <span class="text-gray-500 dark:text-gray-400">Fichier</span>
+            <span class="truncate text-right" title="${esc(getFilePath())}">${esc(shortenPath(getFilePath()))}</span>
+            <span class="text-gray-500 dark:text-gray-400">Services</span>
+            <span class="text-right">${serviceCount}</span>
+            <span class="text-gray-500 dark:text-gray-400">Environnements</span>
+            <span class="text-right">${envCount}</span>
+            <span class="text-gray-500 dark:text-gray-400">Secrets</span>
+            <span class="text-right">${secretCount}</span>
+            <span class="text-gray-500 dark:text-gray-400">Templates</span>
+            <span class="text-right">${templateCount}</span>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <h4 class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Securite</h4>
+          <div class="flex items-center justify-between">
+            <label for="settings-autolock" class="text-sm">Verrouillage auto (min)</label>
+            <select id="settings-autolock" class="px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              ${[1, 2, 5, 10, 15, 30, 60].map(m => `<option value="${m}"${m === settings.autolockMinutes ? ' selected' : ''}>${m}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+
+        <div class="flex justify-end">
+          ${renderButton('Fermer', { id: 'settings-close', variant: 'secondary' })}
         </div>
       </div>
     </div>`;
@@ -160,6 +207,7 @@ function renderMain() {
         </div>
         <div class="no-drag flex items-center gap-3">
           ${renderButton(icons.search(), { id: 'btn-search', variant: 'icon', title: 'Rechercher (Ctrl+K)' })}
+          ${renderButton(icons.gear(), { id: 'btn-settings', variant: 'icon', title: 'Parametres' })}
           ${renderButton(icons.theme(), { id: 'btn-theme', variant: 'icon', title: 'Toggle theme' })}
           ${renderButton('Mot de passe', { id: 'btn-change-password', variant: 'ghost' })}
           ${renderButton('Verrouiller', { id: 'btn-lock', cls: 'px-3 py-1.5 text-sm rounded-lg bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50' })}
@@ -183,7 +231,15 @@ function renderMain() {
       </div>
 
       ${renderChangePasswordModal()}
+      ${renderSettingsModal()}
       ${renderSearchModal()}
+      <!-- Privacy overlay on window blur -->
+      <div id="privacy-overlay" class="hidden fixed inset-0 z-[100] bg-gray-50/80 dark:bg-gray-950/80 backdrop-blur-lg flex items-center justify-center">
+        <div class="text-center">
+          <h2 class="text-2xl font-bold text-gray-400 dark:text-gray-600">Victory's Secrets</h2>
+          <p class="text-sm text-gray-400 dark:text-gray-600 mt-1">Cliquez pour revenir</p>
+        </div>
+      </div>
     </div>`;
 }
 
@@ -246,6 +302,27 @@ function bindChangePassword() {
   };
 }
 
+function bindSettings() {
+  const modal = document.getElementById('settings-modal');
+  document.getElementById('btn-settings').onclick = () => {
+    modal.classList.remove('hidden');
+  };
+  document.getElementById('settings-close').onclick = () => {
+    modal.classList.add('hidden');
+  };
+  modal.onclick = (e) => {
+    if (e.target === modal) modal.classList.add('hidden');
+  };
+
+  const autolockSelect = document.getElementById('settings-autolock');
+  autolockSelect.onchange = async () => {
+    const minutes = parseInt(autolockSelect.value, 10);
+    await vault.setAutolockMinutes(minutes);
+    setAutolockMinutes(minutes);
+    showToast(`Verrouillage auto: ${minutes} min`, 'success');
+  };
+}
+
 function bindMain() {
   document.querySelectorAll('[data-nav]').forEach(btn => {
     btn.onclick = () => { setCurrentSection(btn.dataset.nav); render(); };
@@ -253,10 +330,21 @@ function bindMain() {
 
   document.getElementById('btn-theme').onclick = toggleTheme;
   document.getElementById('btn-lock').onclick = () => {
+    clearSecretStore();
     vault.lock();
     stopAutoLock();
     render();
   };
+
+  // Privacy overlay on window blur/focus
+  if (window.electronAPI?.onWindowBlur) {
+    window.electronAPI.onWindowBlur(() => {
+      document.getElementById('privacy-overlay')?.classList.remove('hidden');
+    });
+    window.electronAPI.onWindowFocus(() => {
+      document.getElementById('privacy-overlay')?.classList.add('hidden');
+    });
+  }
   document.getElementById('btn-search').onclick = () => {
     const modal = document.getElementById('search-modal');
     modal.classList.remove('hidden');
@@ -264,6 +352,7 @@ function bindMain() {
   };
 
   bindChangePassword();
+  bindSettings();
   bindSearch();
 
   switch (currentSection) {
@@ -282,7 +371,9 @@ function render() {
     app.innerHTML = renderWelcome();
     bindWelcome(render);
   } else {
-    startAutoLock(() => { vault.lock(); render(); showToast('Vault verrouille (inactivite)', 'info'); });
+    const settings = vault.getSettings();
+    setAutolockMinutes(settings.autolockMinutes);
+    startAutoLock(() => { clearSecretStore(); vault.lock(); render(); showToast('Vault verrouille (inactivite)', 'info'); });
     app.innerHTML = renderMain();
     bindMain();
   }

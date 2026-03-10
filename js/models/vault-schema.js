@@ -2,9 +2,14 @@
 
 export const CURRENT_VERSION = 1;
 
+export const DEFAULT_SETTINGS = {
+  autolockMinutes: 5,
+};
+
 export function createEmpty() {
   return {
     version: CURRENT_VERSION,
+    settings: { ...DEFAULT_SETTINGS },
     services: {},
     environments: [],
     environmentMeta: {},
@@ -24,5 +29,7 @@ export function ensureStructure(data) {
   if (!data.secrets.global) data.secrets.global = {};
   if (!data.secrets.envs) data.secrets.envs = {};
   if (!data.templates) data.templates = {};
+  if (!data.settings) data.settings = { ...DEFAULT_SETTINGS };
+  if (data.settings.autolockMinutes == null) data.settings.autolockMinutes = DEFAULT_SETTINGS.autolockMinutes;
   return data;
 }

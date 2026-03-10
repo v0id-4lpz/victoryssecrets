@@ -52,8 +52,15 @@ export async function decrypt(buffer, password) {
     ciphertext
   );
   const decoder = new TextDecoder();
+  const json = decoder.decode(decrypted);
+  let data;
+  try {
+    data = JSON.parse(json);
+  } catch {
+    throw new Error('Vault data is corrupted (invalid JSON)');
+  }
   return {
-    data: JSON.parse(decoder.decode(decrypted)),
+    data,
     key,
     salt,
   };

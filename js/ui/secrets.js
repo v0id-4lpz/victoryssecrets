@@ -17,6 +17,22 @@ const CLIPBOARD_CLEAR_DELAY = 10_000;
 // In-memory store for secret values — never stored in DOM attributes
 const secretValueStore = new Map();
 
+// Last copied value — tracked for clipboard cleanup
+let lastCopiedValue = null;
+
+/**
+ * Clear clipboard if it still contains a copied secret, and wipe the store.
+ */
+export function clearSecretStore() {
+  if (lastCopiedValue) {
+    navigator.clipboard.readText().then(current => {
+      if (current === lastCopiedValue) navigator.clipboard.writeText('');
+    }).catch(() => {});
+    lastCopiedValue = null;
+  }
+  secretValueStore.clear();
+}
+
 // Generator modal target — kept in JS, not on DOM element
 let generatorTargetInput = null;
 
@@ -303,6 +319,7 @@ export function bindSecrets(render) {
       e.stopPropagation();
       const val = secretValueStore.get(btn.dataset.copySecret);
       if (!val) return;
+      lastCopiedValue = val;
       navigator.clipboard.writeText(val);
       showToast('Copie dans le presse-papier (efface dans 10s)', 'success');
       setTimeout(() => {

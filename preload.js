@@ -7,4 +7,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openFilePath: (filePath) => ipcRenderer.invoke('file:open-path', filePath),
   importEnv: () => ipcRenderer.invoke('file:import-env'),
   argon2id: (password, salt) => ipcRenderer.invoke('crypto:argon2id', { password, salt: Array.from(salt) }),
+  onWindowBlur: (callback) => ipcRenderer.on('window:blur', callback),
+  onWindowFocus: (callback) => ipcRenderer.on('window:focus', callback),
 });
