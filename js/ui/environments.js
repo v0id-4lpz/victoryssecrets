@@ -7,6 +7,8 @@ import { renderEditableRow, bindEditableRows } from './components/editable-row.j
 import { startInlineEdit, insertNewRow } from './components/inline-edit.js';
 import { renderSectionHeader, renderAddButton } from './components/section-header.js';
 import { renderEmptyState } from './components/empty-state.js';
+import { showToast } from './components/toast.js';
+import { sanitizeId } from '../models/validators.js';
 
 export function renderEnvironments(render) {
   const data = vault.getData();
@@ -44,16 +46,22 @@ function startEnvForm(container, render, { id, comment } = {}) {
       ],
     ],
     onSave: async (values) => {
-      const newId = values.id.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+      const newId = sanitizeId(values.id);
       if (!newId) return;
-      if (isCreate) {
-        await vault.addEnvironment(newId, values.comment);
-      } else {
-        if (newId !== id) await vault.renameEnvironment(id, newId);
-        const targetId = newId !== id ? newId : id;
-        if (values.comment !== (comment || '')) await vault.setEnvironmentComment(targetId, values.comment);
+      try {
+        if (isCreate) {
+          await vault.addEnvironment(newId, values.comment);
+          showToast('Environnement ajoute', 'success');
+        } else {
+          if (newId !== id) await vault.renameEnvironment(id, newId);
+          const targetId = newId !== id ? newId : id;
+          if (values.comment !== (comment || '')) await vault.setEnvironmentComment(targetId, values.comment);
+          showToast('Environnement modifie', 'success');
+        }
+        render();
+      } catch (e) {
+        showToast(e.message, 'error');
       }
-      render();
     },
     onCancel: render,
   });

@@ -3,40 +3,48 @@
 const SALT_LENGTH = 16;
 const IV_LENGTH = 12;
 
-async function deriveKey(password, salt) {
+/**
+ * Derive a non-extractable AES-256-GCM CryptoKey from password + salt.
+ */
+export async function deriveKey(password, salt) {
   const rawKey = await window.electronAPI.argon2id(password, salt);
   return crypto.subtle.importKey(
     'raw',
     new Uint8Array(rawKey),
     { name: 'AES-GCM' },
-    false,
+    false, // non-extractable — key material stays in protected memory
     ['encrypt', 'decrypt']
   );
 }
 
-export async function encrypt(data, password) {
+/**
+ * Encrypt vault data with a CryptoKey.
+ * Format: salt (16) + iv (12) + ciphertext
+ */
+export async function encrypt(data, key, salt) {
   const encoder = new TextEncoder();
-  const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
   const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
-  const key = await deriveKey(password, salt);
   const encrypted = await crypto.subtle.encrypt(
     { name: 'AES-GCM', iv },
     key,
     encoder.encode(JSON.stringify(data))
   );
-  // Format: salt (16) + iv (12) + ciphertext
-  const result = new Uint8Array(salt.length + iv.length + encrypted.byteLength);
+  const result = new Uint8Array(SALT_LENGTH + IV_LENGTH + encrypted.byteLength);
   result.set(salt, 0);
-  result.set(iv, salt.length);
-  result.set(new Uint8Array(encrypted), salt.length + iv.length);
+  result.set(iv, SALT_LENGTH);
+  result.set(new Uint8Array(encrypted), SALT_LENGTH + IV_LENGTH);
   return result;
 }
 
+/**
+ * Decrypt vault data with password.
+ * Returns { data, key, salt } so the caller can cache the CryptoKey.
+ */
 export async function decrypt(buffer, password) {
-  const data = new Uint8Array(buffer);
-  const salt = data.slice(0, SALT_LENGTH);
-  const iv = data.slice(SALT_LENGTH, SALT_LENGTH + IV_LENGTH);
-  const ciphertext = data.slice(SALT_LENGTH + IV_LENGTH);
+  const raw = new Uint8Array(buffer);
+  const salt = raw.slice(0, SALT_LENGTH);
+  const iv = raw.slice(SALT_LENGTH, SALT_LENGTH + IV_LENGTH);
+  const ciphertext = raw.slice(SALT_LENGTH + IV_LENGTH);
   const key = await deriveKey(password, salt);
   const decrypted = await crypto.subtle.decrypt(
     { name: 'AES-GCM', iv },
@@ -44,5 +52,16 @@ export async function decrypt(buffer, password) {
     ciphertext
   );
   const decoder = new TextDecoder();
-  return JSON.parse(decoder.decode(decrypted));
+  return {
+    data: JSON.parse(decoder.decode(decrypted)),
+    key,
+    salt,
+  };
+}
+
+/**
+ * Generate a fresh random salt.
+ */
+export function generateSalt() {
+  return crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
 }

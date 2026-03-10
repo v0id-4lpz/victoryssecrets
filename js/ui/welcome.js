@@ -8,28 +8,10 @@ import { renderButton, setButtonLoading } from './components/button.js';
 import { renderDeleteButton } from './components/delete-button.js';
 import { icons } from './components/icon.js';
 import { MIN_PASSWORD_LENGTH, renderStrengthBar, updateStrengthBar } from './components/password-strength.js';
+import { fileName, dirName } from './helpers.js';
 
 let pendingAction = null; // 'create' | 'open'
 let pendingBuffer = null;
-
-function fileName(filePath) {
-  return filePath.split(/[/\\]/).pop();
-}
-
-function dirName(filePath) {
-  const parts = filePath.split(/[/\\]/);
-  parts.pop();
-  let dir = parts.join('/');
-  const home = typeof process !== 'undefined' ? '' : '';
-  // Shorten home dir
-  try {
-    if (dir.startsWith('/Users/')) {
-      const segments = dir.split('/');
-      dir = '~/' + segments.slice(3).join('/');
-    }
-  } catch {}
-  return dir;
-}
 
 function renderRecentsList() {
   const recents = getRecents();

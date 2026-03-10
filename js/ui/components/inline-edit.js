@@ -1,9 +1,7 @@
 // inline-edit.js — inline form for create/edit with row-based layout
 
-import { esc } from '../helpers.js';
+import { esc, INPUT_CLS } from '../helpers.js';
 import { renderButton } from './button.js';
-
-const inputCls = 'px-3 py-1 rounded-lg border border-indigo-500 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none';
 
 /**
  * Renders an inline form inside a container.
@@ -26,7 +24,7 @@ export function startInlineEdit(container, { rows, onSave, onCancel, onInput, on
         <div class="flex gap-2 items-center">
           ${row.map(f => {
             if (f.html) return f.html;
-            return `<input type="${f.type || 'text'}" name="${esc(f.name)}" value="${esc(f.value || '')}" ${f.placeholder ? `placeholder="${esc(f.placeholder)}"` : ''} ${f.readonly ? 'readonly tabindex="-1"' : ''} class="${inputCls} ${f.cls || 'flex-1'} ${f.readonly ? 'opacity-50 cursor-default' : ''}" />`;
+            return `<input type="${f.type || 'text'}" name="${esc(f.name)}" value="${esc(f.value || '')}" ${f.placeholder ? `placeholder="${esc(f.placeholder)}"` : ''} ${f.readonly ? 'readonly tabindex="-1"' : ''} class="${INPUT_CLS} ${f.cls || 'flex-1'} ${f.readonly ? 'opacity-50 cursor-default' : ''}" />`;
           }).join('')}
           ${rowIdx === lastRowIdx ? `
             ${renderButton('OK', { variant: 'success', cls: '!px-2 !py-1 !text-xs shrink-0', attrs: 'data-inline-save' })}

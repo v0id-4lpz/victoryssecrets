@@ -6,24 +6,17 @@ import { initTheme, toggleTheme } from './ui/theme.js';
 import { renderButton, setButtonLoading } from './ui/components/button.js';
 import { icons } from './ui/components/icon.js';
 import { MIN_PASSWORD_LENGTH, renderStrengthBar, updateStrengthBar } from './ui/components/password-strength.js';
-import { currentSection, setCurrentSection } from './ui/helpers.js';
+import { showToast } from './ui/components/toast.js';
+import { currentSection, setCurrentSection, esc, shortenPath } from './ui/helpers.js';
 import { renderWelcome, bindWelcome } from './ui/welcome.js';
 import { renderServices, bindServices } from './ui/services.js';
 import { renderEnvironments, bindEnvironments } from './ui/environments.js';
 import { renderSecrets, bindSecrets } from './ui/secrets.js';
 import { renderTemplates, bindTemplates } from './ui/templates.js';
 import { renderGenerate, bindGenerate } from './ui/generate.js';
-
-function shortenPath(filePath) {
-  if (!filePath) return '';
-  try {
-    if (filePath.startsWith('/Users/')) {
-      const parts = filePath.split('/');
-      return '~/' + parts.slice(3).join('/');
-    }
-  } catch {}
-  return filePath;
-}
+import { startAutoLock, stopAutoLock } from './autolock.js';
+import { buildSearchIndex as buildIndex, filterSearch as searchFilter } from './services/search.js';
+import { getEnvironmentComment } from './services/environment-ops.js';
 
 function renderNavItem(section, label) {
   const active = currentSection === section;
@@ -65,6 +58,97 @@ function renderChangePasswordModal() {
     </div>`;
 }
 
+function renderSearchModal() {
+  return `
+    <div id="search-modal" class="hidden fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-black/50">
+      <div class="bg-white dark:bg-gray-900 rounded-xl w-full max-w-lg border border-gray-200 dark:border-gray-700 shadow-xl overflow-hidden">
+        <div class="flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          ${icons.search()}
+          <input id="search-input" type="text" placeholder="Rechercher services, secrets, templates..." class="flex-1 bg-transparent text-sm focus:outline-none" />
+          <kbd class="text-xs text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">Esc</kbd>
+        </div>
+        <div id="search-results" class="max-h-80 overflow-y-auto p-2"></div>
+      </div>
+    </div>`;
+}
+
+function buildSearchIndex() {
+  const data = vault.getData();
+  return buildIndex(data, (envId) => getEnvironmentComment(data, envId));
+}
+
+function filterSearch(query, index) {
+  return searchFilter(query, index);
+}
+
+const SEARCH_TYPE_LABELS = { service: 'Service', env: 'Env', secret: 'Secret', template: 'Template' };
+const SEARCH_TYPE_COLORS = {
+  service: 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300',
+  env: 'bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-300',
+  secret: 'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300',
+  template: 'bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300',
+};
+
+function renderSearchResults(results) {
+  if (results.length === 0) return '<p class="text-gray-400 text-xs px-3 py-4 text-center">Aucun resultat</p>';
+  return results.map(r => `
+    <button data-search-nav="${r.section}" class="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+      <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded ${SEARCH_TYPE_COLORS[r.type]}">${SEARCH_TYPE_LABELS[r.type]}</span>
+      <span class="text-sm truncate flex-1">${esc(r.label)}</span>
+      <span class="text-xs text-gray-400 truncate max-w-[120px]">${esc(r.comment)}</span>
+    </button>
+  `).join('');
+}
+
+function bindSearch() {
+  const modal = document.getElementById('search-modal');
+  const input = document.getElementById('search-input');
+  const resultsEl = document.getElementById('search-results');
+  if (!modal) return;
+
+  const index = buildSearchIndex();
+
+  const openSearch = () => {
+    modal.classList.remove('hidden');
+    input.value = '';
+    resultsEl.innerHTML = '';
+    input.focus();
+  };
+
+  const closeSearch = () => {
+    modal.classList.add('hidden');
+  };
+
+  // Ctrl+K / Cmd+K
+  document.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      if (modal.classList.contains('hidden')) openSearch();
+      else closeSearch();
+    }
+  });
+
+  input.addEventListener('input', () => {
+    const results = filterSearch(input.value, index);
+    resultsEl.innerHTML = renderSearchResults(results);
+    // Bind navigation
+    resultsEl.querySelectorAll('[data-search-nav]').forEach(btn => {
+      btn.onclick = () => {
+        setCurrentSection(btn.dataset.searchNav);
+        closeSearch();
+        render();
+      };
+    });
+  });
+
+  input.onkeydown = (e) => {
+    if (e.key === 'Escape') closeSearch();
+  };
+  modal.onclick = (e) => {
+    if (e.target === modal) closeSearch();
+  };
+}
+
 function renderMain() {
   return `
     <div class="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white">
@@ -75,6 +159,7 @@ function renderMain() {
           <span class="text-xs text-gray-400 truncate">${shortenPath(getFilePath())}</span>
         </div>
         <div class="no-drag flex items-center gap-3">
+          ${renderButton(icons.search(), { id: 'btn-search', variant: 'icon', title: 'Rechercher (Ctrl+K)' })}
           ${renderButton(icons.theme(), { id: 'btn-theme', variant: 'icon', title: 'Toggle theme' })}
           ${renderButton('Mot de passe', { id: 'btn-change-password', variant: 'ghost' })}
           ${renderButton('Verrouiller', { id: 'btn-lock', cls: 'px-3 py-1.5 text-sm rounded-lg bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50' })}
@@ -98,6 +183,7 @@ function renderMain() {
       </div>
 
       ${renderChangePasswordModal()}
+      ${renderSearchModal()}
     </div>`;
 }
 
@@ -150,9 +236,8 @@ function bindChangePassword() {
     try {
       await vault.changePassword(current, newPw);
       setButtonLoading(submitBtn, false, 'Changer');
-      successEl.textContent = 'Mot de passe modifie';
-      successEl.classList.remove('hidden');
-      setTimeout(() => modal.classList.add('hidden'), 1200);
+      showToast('Mot de passe modifie', 'success');
+      setTimeout(() => modal.classList.add('hidden'), 800);
     } catch {
       setButtonLoading(submitBtn, false, 'Changer');
       errorEl.textContent = 'Mot de passe actuel incorrect';
@@ -167,9 +252,19 @@ function bindMain() {
   });
 
   document.getElementById('btn-theme').onclick = toggleTheme;
-  document.getElementById('btn-lock').onclick = () => { vault.lock(); render(); };
+  document.getElementById('btn-lock').onclick = () => {
+    vault.lock();
+    stopAutoLock();
+    render();
+  };
+  document.getElementById('btn-search').onclick = () => {
+    const modal = document.getElementById('search-modal');
+    modal.classList.remove('hidden');
+    document.getElementById('search-input').focus();
+  };
 
   bindChangePassword();
+  bindSearch();
 
   switch (currentSection) {
     case 'services': bindServices(render); break;
@@ -183,9 +278,11 @@ function bindMain() {
 function render() {
   const app = document.getElementById('app');
   if (!vault.isUnlocked()) {
+    stopAutoLock();
     app.innerHTML = renderWelcome();
     bindWelcome(render);
   } else {
+    startAutoLock(() => { vault.lock(); render(); showToast('Vault verrouille (inactivite)', 'info'); });
     app.innerHTML = renderMain();
     bindMain();
   }

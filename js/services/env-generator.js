@@ -1,9 +1,8 @@
-// template.js — .env generation from templates + resolved secrets
+// env-generator.js — .env generation from templates + resolved secrets
 
 export function resolveSecrets(vault, envId) {
-  const resolved = {}; // { serviceId: { field: value } }
+  const resolved = {};
 
-  // 1. Global level
   const globalSecrets = vault.secrets?.global || {};
   for (const [serviceId, fields] of Object.entries(globalSecrets)) {
     resolved[serviceId] = resolved[serviceId] || {};
@@ -12,7 +11,6 @@ export function resolveSecrets(vault, envId) {
     }
   }
 
-  // 2. Environment level (wins)
   const envSecrets = vault.secrets?.envs?.[envId] || {};
   for (const [serviceId, fields] of Object.entries(envSecrets)) {
     resolved[serviceId] = resolved[serviceId] || {};
@@ -40,12 +38,10 @@ export function generateEnv(vault, envId) {
     const refMatch = rawValue.match(/^\$\{(.+)\}$/);
     if (refMatch) {
       const ref = refMatch[1];
-      // Magic variable
       if (magicVars[ref] !== undefined) {
         lines.push(`${key}=${magicVars[ref]}`);
         continue;
       }
-      // Service.field reference
       const dotIndex = ref.indexOf('.');
       if (dotIndex === -1) {
         warnings.push(`${key}: invalid reference \${${ref}} (expected \${service.field})`);
@@ -62,7 +58,6 @@ export function generateEnv(vault, envId) {
         lines.push(`${key}=${value}`);
       }
     } else {
-      // Hard-coded value
       lines.push(`${key}=${rawValue}`);
     }
   }

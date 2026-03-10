@@ -2,7 +2,7 @@
 
 import * as vault from '../vault.js';
 import { generatePassword, generateBase64, generateHex, generateUUID } from '../generator.js';
-import { esc, selectedEnv, secretLevelScope, setSelectedEnv, setSecretLevelScope } from './helpers.js';
+import { esc, selectedEnv, secretLevelScope, setSelectedEnv, setSecretLevelScope, INPUT_CLS, renderEnvOptions } from './helpers.js';
 import { renderButton } from './components/button.js';
 import { icons } from './components/icon.js';
 import { renderDeleteButton, bindDeleteButtons } from './components/delete-button.js';
@@ -10,8 +10,15 @@ import { bindEditableRows } from './components/editable-row.js';
 import { renderEmptyState } from './components/empty-state.js';
 import { renderAddButton } from './components/section-header.js';
 import { startInlineEdit } from './components/inline-edit.js';
+import { showToast } from './components/toast.js';
 
-const selectCls = 'px-3 py-1 rounded-lg border border-indigo-500 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none';
+const CLIPBOARD_CLEAR_DELAY = 10_000;
+
+// In-memory store for secret values — never stored in DOM attributes
+const secretValueStore = new Map();
+
+// Generator modal target — kept in JS, not on DOM element
+let generatorTargetInput = null;
 
 function getCurrentLevel() {
   if (secretLevelScope === 'env' && selectedEnv) return { scope: 'env', envId: selectedEnv };
@@ -21,11 +28,18 @@ function getCurrentLevel() {
 export function renderSecrets(render) {
   const data = vault.getData();
   const envs = data.environments || [];
-  let envOptions = envs.map(e => `<option value="${e}" ${e === selectedEnv ? 'selected' : ''}>${esc(e)}</option>`).join('');
 
   const level = getCurrentLevel();
   const secrets = vault.getSecretsAtLevel(level);
   const secretEntries = Object.entries(secrets);
+
+  // Populate in-memory store (clear previous)
+  secretValueStore.clear();
+  for (const [serviceId, fields] of secretEntries) {
+    for (const [field, entry] of Object.entries(fields)) {
+      secretValueStore.set(`${serviceId}:${field}`, entry.value);
+    }
+  }
 
   return `
     <div class="max-w-3xl">
@@ -48,7 +62,7 @@ export function renderSecrets(render) {
           <label class="block text-xs text-gray-500 mb-1">Environnement</label>
           <select id="secret-env" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
             <option value="">--</option>
-            ${envOptions}
+            ${renderEnvOptions(envs, selectedEnv)}
           </select>
         </div>` : ''}
       </div>
@@ -61,17 +75,21 @@ export function renderSecrets(render) {
           ? renderEmptyState('Aucun secret a ce niveau.')
           : `<div class="space-y-3">${secretEntries.map(([serviceId, fields]) => `
             <div class="p-4 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
-              <h3 class="text-sm font-semibold text-indigo-500 mb-2">${esc(vault.getData().services[serviceId]?.label || serviceId)}</h3>
+              <h3 class="text-sm font-semibold text-indigo-500 mb-2">${esc(data.services[serviceId]?.label || serviceId)}</h3>
               <div class="space-y-1">
-                ${Object.entries(fields).map(([field, entry]) => `
-                <div class="group flex items-center gap-3 text-sm py-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 -mx-2 px-2 rounded transition" data-edit-secret="${serviceId}:${field}" data-is-secret="${entry.secret}">
+                ${Object.entries(fields).map(([field, entry]) => {
+                  const key = `${serviceId}:${field}`;
+                  return `
+                <div class="group flex items-center gap-3 text-sm py-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 -mx-2 px-2 rounded transition" data-edit-secret="${key}" data-is-secret="${entry.secret}">
                   <span class="w-40 text-gray-500 shrink-0 pointer-events-none">${esc(field)}</span>
-                  <span class="flex-1 font-mono pointer-events-none" data-secret-display="${serviceId}:${field}">
+                  <span class="flex-1 font-mono pointer-events-none" data-secret-display="${key}">
                     ${entry.secret && entry.value ? '<span class="text-gray-400">\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022</span>' : esc(entry.value)}
                   </span>
-                  ${entry.secret ? renderButton(icons.eye(), { variant: 'icon', attrs: `data-toggle-secret="${serviceId}:${field}" data-value="${esc(entry.value)}" data-visible="false"`, title: 'Afficher/Masquer' }) : ''}
-                  ${renderDeleteButton('data-remove-secret', `${serviceId}:${field}`)}
-                </div>`).join('')}
+                  ${renderButton(icons.copy(), { variant: 'icon', attrs: `data-copy-secret="${key}"`, title: 'Copier' })}
+                  ${entry.secret ? renderButton(icons.eye(), { variant: 'icon', attrs: `data-toggle-secret="${key}" data-visible="false"`, title: 'Afficher/Masquer' }) : ''}
+                  ${renderDeleteButton('data-remove-secret', key)}
+                </div>`;
+                }).join('')}
               </div>
             </div>`).join('')}</div>`
         }
@@ -84,7 +102,7 @@ function startSecretForm(container, render, { serviceId, field, value, isSecret 
   const data = vault.getData();
   const services = Object.entries(data.services || {});
 
-  const serviceSelectHtml = `<select name="serviceId" class="${selectCls} flex-1">
+  const serviceSelectHtml = `<select name="serviceId" class="${INPUT_CLS} flex-1">
       <option value="">Service...</option>
       ${services.map(([id, s]) => `<option value="${id}" ${id === serviceId ? 'selected' : ''}>${esc(s.label)}</option>`).join('')}
      </select>`;
@@ -119,6 +137,7 @@ function startSecretForm(container, render, { serviceId, field, value, isSecret 
         await vault.moveSecret(level, serviceId, field, svcId, newField);
       }
       await vault.setSecret(level, svcId, newField, newValue, newIsSecret);
+      showToast(isCreate ? 'Secret ajoute' : 'Secret modifie', 'success');
       render();
     },
     onCancel: render,
@@ -136,7 +155,7 @@ function startSecretForm(container, render, { serviceId, field, value, isSecret 
           e.stopPropagation();
           const modal = document.getElementById('generator-modal');
           modal.classList.remove('hidden');
-          modal._targetInput = valueInput;
+          generatorTargetInput = valueInput;
           updateGeneratorPreview();
         };
       }
@@ -221,8 +240,8 @@ function bindGenerator() {
   const modal = document.getElementById('generator-modal');
   document.getElementById('gen-cancel').onclick = () => modal.classList.add('hidden');
   document.getElementById('gen-use').onclick = () => {
-    const target = modal._targetInput;
-    if (target) target.value = document.getElementById('gen-preview').textContent;
+    if (generatorTargetInput) generatorTargetInput.value = document.getElementById('gen-preview').textContent;
+    generatorTargetInput = null;
     modal.classList.add('hidden');
   };
 
@@ -278,6 +297,22 @@ export function bindSecrets(render) {
     startSecretForm(row, render);
   };
 
+  // Copy secret value (from in-memory store, not DOM)
+  document.querySelectorAll('[data-copy-secret]').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const val = secretValueStore.get(btn.dataset.copySecret);
+      if (!val) return;
+      navigator.clipboard.writeText(val);
+      showToast('Copie dans le presse-papier (efface dans 10s)', 'success');
+      setTimeout(() => {
+        navigator.clipboard.readText().then(current => {
+          if (current === val) navigator.clipboard.writeText('');
+        }).catch(() => {});
+      }, CLIPBOARD_CLEAR_DELAY);
+    };
+  });
+
   // Edit secret
   bindEditableRows('[data-edit-secret]', (row) => {
     const [serviceId, field] = row.dataset.editSecret.split(':');
@@ -286,9 +321,9 @@ export function bindSecrets(render) {
     const secrets = vault.getSecretsAtLevel(level);
     const currentValue = secrets[serviceId]?.[field]?.value || '';
     startSecretForm(row, render, { serviceId, field, value: currentValue, isSecret });
-  }, ['[data-toggle-secret]', '[data-remove-secret]']);
+  }, ['[data-copy-secret]', '[data-toggle-secret]', '[data-remove-secret]']);
 
-  // Toggle secret visibility
+  // Toggle secret visibility (from in-memory store, not DOM)
   document.querySelectorAll('[data-toggle-secret]').forEach(btn => {
     btn.onclick = () => {
       const key = btn.dataset.toggleSecret;
@@ -298,7 +333,7 @@ export function bindSecrets(render) {
         display.innerHTML = '<span class="text-gray-400">\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022</span>';
         btn.dataset.visible = 'false';
       } else {
-        display.textContent = btn.dataset.value;
+        display.textContent = secretValueStore.get(key) || '';
         btn.dataset.visible = 'true';
       }
     };

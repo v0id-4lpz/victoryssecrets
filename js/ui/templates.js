@@ -2,50 +2,16 @@
 
 import * as vault from '../vault.js';
 import { importEnvFile } from '../storage.js';
-import { esc, selectedEnv, setSelectedEnv } from './helpers.js';
+import { esc, selectedEnv, setSelectedEnv, renderEnvOptions } from './helpers.js';
 import { renderButton } from './components/button.js';
 import { renderDeleteButton, bindDeleteButtons } from './components/delete-button.js';
 import { bindEditableRows } from './components/editable-row.js';
 import { renderEmptyState } from './components/empty-state.js';
 import { startInlineEdit } from './components/inline-edit.js';
-
-function parseEnvFile(text) {
-  const keys = [];
-  for (const line of text.split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const match = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)=/);
-    if (match) keys.push(match[1]);
-  }
-  return keys;
-}
-
-function buildServiceFieldTree() {
-  const data = vault.getData();
-  const services = data.services || {};
-  const allSecrets = data.secrets || {};
-  const fieldsByService = {};
-  const collectFields = (obj) => {
-    for (const [serviceId, fields] of Object.entries(obj || {})) {
-      if (typeof fields !== 'object') continue;
-      if (!fieldsByService[serviceId]) fieldsByService[serviceId] = new Set();
-      for (const f of Object.keys(fields)) {
-        fieldsByService[serviceId].add(f);
-      }
-    }
-  };
-  collectFields(allSecrets.global);
-  for (const envId of Object.keys(allSecrets.envs || {})) {
-    collectFields(allSecrets.envs[envId]);
-  }
-  for (const sId of Object.keys(services)) {
-    if (!fieldsByService[sId]) fieldsByService[sId] = new Set();
-  }
-  return { services, fieldsByService };
-}
+import { parseEnvFile, buildServiceFieldTree } from '../services/template-ops.js';
 
 function renderValuePickerDropdown() {
-  const { services, fieldsByService } = buildServiceFieldTree();
+  const { services, fieldsByService } = buildServiceFieldTree(vault.getData());
   const serviceEntries = Object.entries(fieldsByService);
   return `
     <div id="tpl-picker-dropdown" class="hidden absolute z-50 mt-1 w-80 max-h-72 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl">
@@ -95,7 +61,7 @@ export function renderTemplates(render) {
   const data = vault.getData();
   const envs = data.environments || [];
 
-  let envOptions = envs.map(e => `<option value="${e}" ${e === selectedEnv ? 'selected' : ''}>${esc(e)}</option>`).join('');
+  let envOptions = renderEnvOptions(envs, selectedEnv);
 
   let templateContent = '';
   if (selectedEnv) {

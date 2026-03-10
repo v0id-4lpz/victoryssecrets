@@ -1,14 +1,14 @@
 // generate.js — generate .env section
 
 import * as vault from '../vault.js';
-import { generateEnv } from '../template.js';
-import { esc, selectedEnv, setSelectedEnv } from './helpers.js';
+import { generateEnv } from '../services/env-generator.js';
+import { esc, selectedEnv, setSelectedEnv, renderEnvOptions } from './helpers.js';
 import { renderButton } from './components/button.js';
 
 export function renderGenerate(render) {
   const data = vault.getData();
   const envs = data.environments || [];
-  let envOptions = envs.map(e => `<option value="${e}" ${e === selectedEnv ? 'selected' : ''}>${esc(e)}</option>`).join('');
+  let envOptions = renderEnvOptions(envs, selectedEnv);
 
   return `
     <div class="max-w-3xl">

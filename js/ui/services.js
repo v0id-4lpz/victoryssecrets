@@ -7,15 +7,8 @@ import { renderEditableRow, bindEditableRows } from './components/editable-row.j
 import { startInlineEdit, insertNewRow } from './components/inline-edit.js';
 import { renderSectionHeader, renderAddButton } from './components/section-header.js';
 import { renderEmptyState } from './components/empty-state.js';
-
-function labelToId(label) {
-  return label
-    .trim()
-    .toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_|_$/g, '');
-}
+import { showToast } from './components/toast.js';
+import { sanitizeId, labelToId } from '../models/validators.js';
 
 export function renderServices(render) {
   const data = vault.getData();
@@ -68,17 +61,23 @@ function startServiceForm(container, render, { id, label, comment } = {}) {
       }
     },
     onSave: async (values) => {
-      const newId = values.id.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+      const newId = sanitizeId(values.id);
       if (!values.label || !newId) return;
-      if (isCreate) {
-        await vault.addService(newId, values.label, values.comment);
-      } else {
-        if (newId !== id) await vault.renameServiceId(id, newId);
-        const targetId = newId !== id ? newId : id;
-        if (values.label !== label) await vault.renameService(targetId, values.label);
-        if (values.comment !== (comment || '')) await vault.setServiceComment(targetId, values.comment);
+      try {
+        if (isCreate) {
+          await vault.addService(newId, values.label, values.comment);
+          showToast('Service ajoute', 'success');
+        } else {
+          if (newId !== id) await vault.renameServiceId(id, newId);
+          const targetId = newId !== id ? newId : id;
+          if (values.label !== label) await vault.renameService(targetId, values.label);
+          if (values.comment !== (comment || '')) await vault.setServiceComment(targetId, values.comment);
+          showToast('Service modifie', 'success');
+        }
+        render();
+      } catch (e) {
+        showToast(e.message, 'error');
       }
-      render();
     },
     onCancel: render,
   });

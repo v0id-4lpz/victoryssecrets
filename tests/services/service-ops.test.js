@@ -1,0 +1,124 @@
+import { describe, it, expect } from 'vitest';
+import { createEmpty } from '../../js/models/vault-schema.js';
+import {
+  hasService, addService, deleteService,
+  renameServiceLabel, renameServiceId, setServiceComment,
+} from '../../js/services/service-ops.js';
+
+function makeVault() {
+  const data = createEmpty();
+  data.services = { pg: { label: 'PostgreSQL', comment: 'Main DB' }, redis: { label: 'Redis', comment: '' } };
+  data.environments = ['prod'];
+  data.secrets.global = { pg: { url: { value: 'postgres://...', secret: true } } };
+  data.secrets.envs = { prod: { pg: { password: { value: 's3cret', secret: true } } } };
+  data.templates = { prod: { DATABASE_URL: '${pg.url}', REDIS: '${redis.host}' } };
+  return data;
+}
+
+describe('service-ops', () => {
+  describe('hasService', () => {
+    it('returns true for existing service', () => {
+      expect(hasService(makeVault(), 'pg')).toBe(true);
+    });
+    it('returns false for missing service', () => {
+      expect(hasService(makeVault(), 'mongo')).toBe(false);
+    });
+  });
+
+  describe('addService', () => {
+    it('adds a new service', () => {
+      const data = makeVault();
+      addService(data, 'mongo', 'MongoDB', 'NoSQL');
+      expect(data.services.mongo).toEqual({ label: 'MongoDB', comment: 'NoSQL' });
+    });
+    it('throws on duplicate', () => {
+      expect(() => addService(makeVault(), 'pg', 'PG')).toThrow('existe deja');
+    });
+    it('defaults comment to empty string', () => {
+      const data = makeVault();
+      addService(data, 'mongo', 'MongoDB');
+      expect(data.services.mongo.comment).toBe('');
+    });
+  });
+
+  describe('deleteService', () => {
+    it('removes the service', () => {
+      const data = makeVault();
+      deleteService(data, 'pg');
+      expect(data.services.pg).toBeUndefined();
+    });
+    it('cleans up global secrets', () => {
+      const data = makeVault();
+      deleteService(data, 'pg');
+      expect(data.secrets.global.pg).toBeUndefined();
+    });
+    it('cleans up env secrets', () => {
+      const data = makeVault();
+      deleteService(data, 'pg');
+      expect(data.secrets.envs.prod.pg).toBeUndefined();
+    });
+    it('removes single-ref template entries for the service', () => {
+      const data = createEmpty();
+      data.services = { pg: { label: 'PG', comment: '' } };
+      data.templates = { prod: { DB: '${pg.url}', OTHER: 'static' } };
+      deleteService(data, 'pg');
+      expect(data.templates.prod.DB).toBeUndefined();
+      expect(data.templates.prod.OTHER).toBe('static');
+    });
+  });
+
+  describe('renameServiceLabel', () => {
+    it('updates the label', () => {
+      const data = makeVault();
+      renameServiceLabel(data, 'pg', 'Postgres DB');
+      expect(data.services.pg.label).toBe('Postgres DB');
+    });
+    it('does nothing for missing service', () => {
+      const data = makeVault();
+      renameServiceLabel(data, 'mongo', 'MongoDB');
+      expect(data.services.mongo).toBeUndefined();
+    });
+  });
+
+  describe('renameServiceId', () => {
+    it('moves the service entry', () => {
+      const data = makeVault();
+      renameServiceId(data, 'pg', 'postgres');
+      expect(data.services.postgres).toBeDefined();
+      expect(data.services.pg).toBeUndefined();
+    });
+    it('moves global secrets', () => {
+      const data = makeVault();
+      renameServiceId(data, 'pg', 'postgres');
+      expect(data.secrets.global.postgres).toBeDefined();
+      expect(data.secrets.global.pg).toBeUndefined();
+    });
+    it('moves env secrets', () => {
+      const data = makeVault();
+      renameServiceId(data, 'pg', 'postgres');
+      expect(data.secrets.envs.prod.postgres).toBeDefined();
+      expect(data.secrets.envs.prod.pg).toBeUndefined();
+    });
+    it('refactors template references', () => {
+      const data = makeVault();
+      renameServiceId(data, 'pg', 'postgres');
+      expect(data.templates.prod.DATABASE_URL).toBe('${postgres.url}');
+    });
+    it('throws on conflicting newId', () => {
+      expect(() => renameServiceId(makeVault(), 'pg', 'redis')).toThrow('existe deja');
+    });
+    it('no-ops when oldId === newId', () => {
+      const data = makeVault();
+      renameServiceId(data, 'pg', 'pg');
+      expect(data.services.pg).toBeDefined();
+    });
+  });
+
+  describe('setServiceComment', () => {
+    it('updates the comment', () => {
+      const data = makeVault();
+      setServiceComment(data, 'pg', 'Updated comment');
+      expect(data.services.pg.comment).toBe('Updated comment');
+    });
+  });
+});
