@@ -40,4 +40,4 @@ npm run build:linux  # Linux (AppImage + tar.gz)
 
 ## License
 
-ISC
+MIT
