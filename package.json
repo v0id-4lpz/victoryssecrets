@@ -14,6 +14,7 @@
     "build:linux": "npm run css && electron-builder --linux",
     "test": "vitest run",
     "test:watch": "vitest"
+    
   },
   "keywords": [],
   "author": "",

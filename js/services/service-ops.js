@@ -14,11 +14,7 @@ export function addService(data, id, label, comment = '') {
 
 export function deleteService(data, id) {
   delete data.services[id];
-  const cleanLevel = (obj) => { if (obj?.[id]) delete obj[id]; };
-  cleanLevel(data.secrets.global);
-  for (const envId of Object.keys(data.secrets.envs || {})) {
-    cleanLevel(data.secrets.envs[envId]);
-  }
+  delete data.secrets[id];
   data.templates = removeServiceRefs(data.templates, id);
   return data;
 }
@@ -35,12 +31,9 @@ export function renameServiceId(data, oldId, newId) {
   if (data.services[newId]) throw new Error(`Service "${newId}" already exists`);
   data.services[newId] = data.services[oldId];
   delete data.services[oldId];
-  const moveSecrets = (obj) => {
-    if (obj?.[oldId]) { obj[newId] = obj[oldId]; delete obj[oldId]; }
-  };
-  moveSecrets(data.secrets.global);
-  for (const envId of Object.keys(data.secrets.envs || {})) {
-    moveSecrets(data.secrets.envs[envId]);
+  if (data.secrets[oldId]) {
+    data.secrets[newId] = data.secrets[oldId];
+    delete data.secrets[oldId];
   }
   data.templates = refactorServiceId(data.templates, oldId, newId);
   return data;

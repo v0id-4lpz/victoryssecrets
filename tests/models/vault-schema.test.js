@@ -20,9 +20,9 @@ describe('vault-schema', () => {
       expect(createEmpty().environmentMeta).toEqual({});
     });
 
-    it('has secrets with global and envs', () => {
+    it('has empty secrets object', () => {
       const v = createEmpty();
-      expect(v.secrets).toEqual({ global: {}, envs: {} });
+      expect(v.secrets).toEqual({});
     });
 
     it('has templates with empty main', () => {
@@ -41,7 +41,7 @@ describe('vault-schema', () => {
       expect(data.services).toEqual({});
       expect(data.environments).toEqual([]);
       expect(data.environmentMeta).toEqual({});
-      expect(data.secrets).toEqual({ global: {}, envs: {} });
+      expect(data.secrets).toEqual({});
       expect(data.templates).toEqual({ main: {} });
       expect(data.settings).toEqual(DEFAULT_SETTINGS);
     });
@@ -55,19 +55,13 @@ describe('vault-schema', () => {
       const data = ensureStructure({
         services: { pg: { label: 'Postgres' } },
         environments: ['prod'],
-        secrets: { global: { pg: { url: { value: 'x', secret: true } } }, envs: {} },
+        secrets: { pg: { url: { secret: true, values: { _global: 'x' } } } },
         templates: { main: { DB: '${pg.url}' } },
       });
       expect(data.services.pg.label).toBe('Postgres');
       expect(data.environments).toEqual(['prod']);
-      expect(data.secrets.global.pg.url.value).toBe('x');
+      expect(data.secrets.pg.url.values._global).toBe('x');
       expect(data.templates.main.DB).toBe('${pg.url}');
-    });
-
-    it('fills missing secrets sub-fields', () => {
-      const data = ensureStructure({ secrets: {} });
-      expect(data.secrets.global).toEqual({});
-      expect(data.secrets.envs).toEqual({});
     });
 
     it('mutates and returns the same object', () => {

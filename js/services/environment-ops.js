@@ -10,7 +10,6 @@ export function addEnvironment(data, envId, comment = '') {
   if (!data.environmentMeta) data.environmentMeta = {};
   if (!data.environmentMeta[envId]) data.environmentMeta[envId] = {};
   data.environmentMeta[envId].comment = comment;
-  if (!data.secrets.envs[envId]) data.secrets.envs[envId] = {};
   return data;
 }
 
@@ -18,9 +17,14 @@ export function renameEnvironment(data, oldId, newId) {
   const idx = data.environments.indexOf(oldId);
   if (idx === -1 || data.environments.includes(newId)) return data;
   data.environments[idx] = newId;
-  if (data.secrets.envs[oldId]) {
-    data.secrets.envs[newId] = data.secrets.envs[oldId];
-    delete data.secrets.envs[oldId];
+  // Rename env key in all secret values
+  for (const fields of Object.values(data.secrets || {})) {
+    for (const entry of Object.values(fields)) {
+      if (entry.values && oldId in entry.values) {
+        entry.values[newId] = entry.values[oldId];
+        delete entry.values[oldId];
+      }
+    }
   }
   if (data.environmentMeta?.[oldId]) {
     if (!data.environmentMeta) data.environmentMeta = {};
@@ -33,7 +37,12 @@ export function renameEnvironment(data, oldId, newId) {
 export function deleteEnvironment(data, envId) {
   const idx = data.environments.indexOf(envId);
   if (idx !== -1) data.environments.splice(idx, 1);
-  delete data.secrets.envs[envId];
+  // Remove env key from all secret values
+  for (const fields of Object.values(data.secrets || {})) {
+    for (const entry of Object.values(fields)) {
+      if (entry.values) delete entry.values[envId];
+    }
+  }
   delete data.environmentMeta?.[envId];
   return data;
 }

@@ -8,18 +8,12 @@ const vaultData = {
   },
   environments: ['prod', 'dev'],
   secrets: {
-    global: {
-      pg: {
-        url: { value: 'postgres://...', secret: true },
-        password: { value: 'secret', secret: true },
-      },
+    pg: {
+      url: { secret: true, values: { _global: 'postgres://...' } },
+      password: { secret: true, values: { _global: 'secret' } },
     },
-    envs: {
-      prod: {
-        redis: {
-          host: { value: 'redis.prod', secret: false },
-        },
-      },
+    redis: {
+      host: { secret: false, values: { _global: 'redis-local', prod: 'redis.prod' } },
     },
   },
   templates: {
@@ -48,16 +42,12 @@ describe('buildSearchIndex', () => {
     expect(envs.find(e => e.id === 'prod').comment).toBe('Production');
   });
 
-  it('includes global secrets', () => {
-    const secrets = index.filter(i => i.type === 'secret' && i.comment === 'global');
-    expect(secrets).toHaveLength(2);
+  it('includes secrets', () => {
+    const secrets = index.filter(i => i.type === 'secret');
+    expect(secrets).toHaveLength(3);
     expect(secrets.find(s => s.id === 'pg:url')).toBeTruthy();
-  });
-
-  it('includes env-scoped secrets', () => {
-    const secrets = index.filter(i => i.type === 'secret' && i.comment === 'env: prod');
-    expect(secrets).toHaveLength(1);
-    expect(secrets[0].id).toBe('redis:host');
+    expect(secrets.find(s => s.id === 'pg:password')).toBeTruthy();
+    expect(secrets.find(s => s.id === 'redis:host')).toBeTruthy();
   });
 
   it('uses service label in secret display', () => {
@@ -72,7 +62,7 @@ describe('buildSearchIndex', () => {
   });
 
   it('handles empty vault data', () => {
-    const idx = buildSearchIndex({ services: {}, environments: [], secrets: { global: {}, envs: {} }, templates: { main: {} } });
+    const idx = buildSearchIndex({ services: {}, environments: [], secrets: {}, templates: { main: {} } });
     expect(idx).toEqual([]);
   });
 });

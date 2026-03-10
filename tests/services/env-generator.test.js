@@ -6,12 +6,14 @@ function makeVault() {
   const data = createEmpty();
   data.services = { pg: { label: 'PostgreSQL', comment: '' }, redis: { label: 'Redis', comment: '' } };
   data.environments = ['prod', 'dev'];
-  data.secrets.global = {
-    pg: { url: { value: 'postgres://global', secret: true }, password: { value: 'globalpass', secret: true } },
-    redis: { host: { value: 'redis-global', secret: false } },
-  };
-  data.secrets.envs = {
-    prod: { pg: { url: { value: 'postgres://prod', secret: true } } },
+  data.secrets = {
+    pg: {
+      url: { secret: true, values: { _global: 'postgres://global', prod: 'postgres://prod' } },
+      password: { secret: true, values: { _global: 'globalpass' } },
+    },
+    redis: {
+      host: { secret: false, values: { _global: 'redis-global' } },
+    },
   };
   data.templates = {
     main: {

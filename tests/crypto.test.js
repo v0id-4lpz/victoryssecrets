@@ -121,8 +121,10 @@ describe('crypto', () => {
         services: { pg: { label: 'PostgreSQL', comment: 'Main DB' } },
         environments: ['prod', 'dev'],
         secrets: {
-          global: { pg: { url: { value: 'postgres://localhost', secret: true } } },
-          envs: { prod: { pg: { password: { value: 'p@$$w0rd!', secret: true } } } },
+          pg: {
+            url: { secret: true, values: { _global: 'postgres://localhost' } },
+            password: { secret: true, values: { prod: 'p@$$w0rd!' } },
+          },
         },
         templates: { main: { DATABASE_URL: '${pg.url}' } },
       };

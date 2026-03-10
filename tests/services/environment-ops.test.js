@@ -9,7 +9,11 @@ function makeVault() {
   const data = createEmpty();
   data.environments = ['prod', 'dev'];
   data.environmentMeta = { prod: { comment: 'Production' }, dev: { comment: '' } };
-  data.secrets.envs = { prod: { pg: { url: { value: 'x', secret: true } } }, dev: {} };
+  data.secrets = {
+    pg: {
+      url: { secret: true, values: { _global: 'postgres://local', prod: 'postgres://prod', dev: 'postgres://dev' } },
+    },
+  };
   return data;
 }
 
@@ -29,11 +33,10 @@ describe('environment-ops', () => {
       addEnvironment(data, 'staging', 'Staging env');
       expect(data.environments).toContain('staging');
     });
-    it('initializes meta and secrets', () => {
+    it('initializes meta', () => {
       const data = makeVault();
       addEnvironment(data, 'staging', 'Staging env');
       expect(data.environmentMeta.staging.comment).toBe('Staging env');
-      expect(data.secrets.envs.staging).toEqual({});
     });
     it('throws on duplicate', () => {
       expect(() => addEnvironment(makeVault(), 'prod')).toThrow('already exists');
@@ -47,11 +50,11 @@ describe('environment-ops', () => {
       expect(data.environments).toContain('development');
       expect(data.environments).not.toContain('dev');
     });
-    it('moves secrets', () => {
+    it('renames env key in secret values', () => {
       const data = makeVault();
       renameEnvironment(data, 'prod', 'production');
-      expect(data.secrets.envs.production).toBeDefined();
-      expect(data.secrets.envs.prod).toBeUndefined();
+      expect(data.secrets.pg.url.values.production).toBe('postgres://prod');
+      expect(data.secrets.pg.url.values.prod).toBeUndefined();
     });
     it('moves meta', () => {
       const data = makeVault();
@@ -71,11 +74,11 @@ describe('environment-ops', () => {
       deleteEnvironment(data, 'prod');
       expect(data.environments).not.toContain('prod');
     });
-    it('removes secrets and meta', () => {
+    it('removes env values from secrets', () => {
       const data = makeVault();
       deleteEnvironment(data, 'prod');
-      expect(data.secrets.envs.prod).toBeUndefined();
-      expect(data.environmentMeta.prod).toBeUndefined();
+      expect(data.secrets.pg.url.values.prod).toBeUndefined();
+      expect(data.secrets.pg.url.values._global).toBe('postgres://local');
     });
   });
 

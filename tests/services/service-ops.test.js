@@ -9,8 +9,12 @@ function makeVault() {
   const data = createEmpty();
   data.services = { pg: { label: 'PostgreSQL', comment: 'Main DB' }, redis: { label: 'Redis', comment: '' } };
   data.environments = ['prod'];
-  data.secrets.global = { pg: { url: { value: 'postgres://...', secret: true } } };
-  data.secrets.envs = { prod: { pg: { password: { value: 's3cret', secret: true } } } };
+  data.secrets = {
+    pg: {
+      url: { secret: true, values: { _global: 'postgres://...' } },
+      password: { secret: true, values: { prod: 's3cret' } },
+    },
+  };
   data.templates = { main: { DATABASE_URL: '${pg.url}', REDIS: '${redis.host}' } };
   return data;
 }
@@ -47,19 +51,15 @@ describe('service-ops', () => {
       deleteService(data, 'pg');
       expect(data.services.pg).toBeUndefined();
     });
-    it('cleans up global secrets', () => {
+    it('cleans up secrets', () => {
       const data = makeVault();
       deleteService(data, 'pg');
-      expect(data.secrets.global.pg).toBeUndefined();
-    });
-    it('cleans up env secrets', () => {
-      const data = makeVault();
-      deleteService(data, 'pg');
-      expect(data.secrets.envs.prod.pg).toBeUndefined();
+      expect(data.secrets.pg).toBeUndefined();
     });
     it('removes single-ref template entries for the service', () => {
       const data = createEmpty();
       data.services = { pg: { label: 'PG', comment: '' } };
+      data.secrets = { pg: { url: { secret: true, values: { _global: 'x' } } } };
       data.templates = { main: { DB: '${pg.url}', OTHER: 'static' } };
       deleteService(data, 'pg');
       expect(data.templates.main.DB).toBeUndefined();
@@ -87,17 +87,11 @@ describe('service-ops', () => {
       expect(data.services.postgres).toBeDefined();
       expect(data.services.pg).toBeUndefined();
     });
-    it('moves global secrets', () => {
+    it('moves secrets', () => {
       const data = makeVault();
       renameServiceId(data, 'pg', 'postgres');
-      expect(data.secrets.global.postgres).toBeDefined();
-      expect(data.secrets.global.pg).toBeUndefined();
-    });
-    it('moves env secrets', () => {
-      const data = makeVault();
-      renameServiceId(data, 'pg', 'postgres');
-      expect(data.secrets.envs.prod.postgres).toBeDefined();
-      expect(data.secrets.envs.prod.pg).toBeUndefined();
+      expect(data.secrets.postgres).toBeDefined();
+      expect(data.secrets.pg).toBeUndefined();
     });
     it('refactors template references', () => {
       const data = makeVault();

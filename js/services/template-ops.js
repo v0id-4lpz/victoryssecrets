@@ -58,20 +58,12 @@ export function mergeTemplate(data, incoming) {
 
 export function buildServiceFieldTree(data) {
   const services = data.services || {};
-  const allSecrets = data.secrets || {};
   const fieldsByService = {};
-  const collectFields = (obj) => {
-    for (const [serviceId, fields] of Object.entries(obj || {})) {
-      if (typeof fields !== 'object') continue;
-      if (!fieldsByService[serviceId]) fieldsByService[serviceId] = new Set();
-      for (const f of Object.keys(fields)) {
-        fieldsByService[serviceId].add(f);
-      }
+  for (const [serviceId, fields] of Object.entries(data.secrets || {})) {
+    if (!fieldsByService[serviceId]) fieldsByService[serviceId] = new Set();
+    for (const f of Object.keys(fields)) {
+      fieldsByService[serviceId].add(f);
     }
-  };
-  collectFields(allSecrets.global);
-  for (const envId of Object.keys(allSecrets.envs || {})) {
-    collectFields(allSecrets.envs[envId]);
   }
   for (const sId of Object.keys(services)) {
     if (!fieldsByService[sId]) fieldsByService[sId] = new Set();

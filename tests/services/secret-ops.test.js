@@ -1,103 +1,160 @@
 import { describe, it, expect } from 'vitest';
-import { createEmpty } from '../../js/models/vault-schema.js';
+import { createEmpty, GLOBAL_ENV } from '../../js/models/vault-schema.js';
 import {
-  getSecretsAtLevel, setSecret, deleteSecret, moveSecret,
+  getAllSecrets, getSecret, setSecret, setSecretValue, setSecretFlag,
+  deleteSecret, deleteSecretValue, moveSecret, resolveValue,
 } from '../../js/services/secret-ops.js';
 
 function makeVault() {
   const data = createEmpty();
   data.services = { pg: { label: 'PostgreSQL', comment: '' }, redis: { label: 'Redis', comment: '' } };
-  data.secrets.global = {
-    pg: { url: { value: 'postgres://localhost', secret: true }, password: { value: 's3cret', secret: true } },
+  data.environments = ['prod'];
+  data.secrets = {
+    pg: {
+      url: { secret: true, values: { _global: 'postgres://localhost', prod: 'postgres://prod' } },
+      password: { secret: true, values: { _global: 's3cret' } },
+    },
+    redis: {
+      host: { secret: false, values: { _global: 'redis-local', prod: 'redis.prod' } },
+    },
   };
-  data.secrets.envs = { prod: { redis: { host: { value: 'redis.prod', secret: false } } } };
   data.templates = { main: { DATABASE_URL: '${pg.url}', REDIS: '${redis.host}' } };
   return data;
 }
 
 describe('secret-ops', () => {
-  describe('getSecretsAtLevel', () => {
-    it('returns global secrets', () => {
+  describe('getAllSecrets', () => {
+    it('returns all secrets', () => {
       const data = makeVault();
-      const result = getSecretsAtLevel(data, { scope: 'global' });
-      expect(result.pg.url.value).toBe('postgres://localhost');
+      const all = getAllSecrets(data);
+      expect(all.pg.url.secret).toBe(true);
+      expect(all.redis.host.secret).toBe(false);
     });
-    it('returns env secrets', () => {
+  });
+
+  describe('getSecret', () => {
+    it('returns a specific secret entry', () => {
       const data = makeVault();
-      const result = getSecretsAtLevel(data, { scope: 'env', envId: 'prod' });
-      expect(result.redis.host.value).toBe('redis.prod');
+      const entry = getSecret(data, 'pg', 'url');
+      expect(entry.secret).toBe(true);
+      expect(entry.values._global).toBe('postgres://localhost');
     });
-    it('creates env bucket if missing', () => {
-      const data = makeVault();
-      const result = getSecretsAtLevel(data, { scope: 'env', envId: 'staging' });
-      expect(result).toEqual({});
-      expect(data.secrets.envs.staging).toEqual({});
-    });
-    it('returns empty object for unknown scope', () => {
-      expect(getSecretsAtLevel(makeVault(), { scope: 'unknown' })).toEqual({});
+    it('returns null for missing secret', () => {
+      expect(getSecret(makeVault(), 'pg', 'nonexistent')).toBeNull();
     });
   });
 
   describe('setSecret', () => {
-    it('sets a global secret', () => {
+    it('creates a new secret', () => {
       const data = makeVault();
-      setSecret(data, { scope: 'global' }, 'pg', 'port', '5432', false);
-      expect(data.secrets.global.pg.port).toEqual({ value: '5432', secret: false });
-    });
-    it('sets an env secret', () => {
-      const data = makeVault();
-      setSecret(data, { scope: 'env', envId: 'prod' }, 'pg', 'host', 'db.prod', true);
-      expect(data.secrets.envs.prod.pg.host).toEqual({ value: 'db.prod', secret: true });
+      setSecret(data, 'pg', 'port', { secret: false, values: { _global: '5432' } });
+      expect(data.secrets.pg.port).toEqual({ secret: false, values: { _global: '5432' } });
     });
     it('creates service bucket if missing', () => {
       const data = makeVault();
-      setSecret(data, { scope: 'global' }, 'mongo', 'uri', 'mongodb://...', true);
-      expect(data.secrets.global.mongo.uri.value).toBe('mongodb://...');
+      setSecret(data, 'mongo', 'uri', { secret: true, values: { _global: 'mongodb://...' } });
+      expect(data.secrets.mongo.uri.values._global).toBe('mongodb://...');
+    });
+    it('overwrites existing', () => {
+      const data = makeVault();
+      setSecret(data, 'pg', 'url', { secret: false, values: { _global: 'new' } });
+      expect(data.secrets.pg.url.secret).toBe(false);
+      expect(data.secrets.pg.url.values._global).toBe('new');
+    });
+  });
+
+  describe('setSecretValue', () => {
+    it('sets value for a specific env', () => {
+      const data = makeVault();
+      setSecretValue(data, 'pg', 'url', 'dev', 'postgres://dev');
+      expect(data.secrets.pg.url.values.dev).toBe('postgres://dev');
+    });
+    it('does nothing for missing secret', () => {
+      const data = makeVault();
+      setSecretValue(data, 'pg', 'nonexistent', 'dev', 'x');
+      expect(data.secrets.pg.nonexistent).toBeUndefined();
+    });
+  });
+
+  describe('setSecretFlag', () => {
+    it('updates the secret flag', () => {
+      const data = makeVault();
+      setSecretFlag(data, 'pg', 'url', false);
+      expect(data.secrets.pg.url.secret).toBe(false);
     });
   });
 
   describe('deleteSecret', () => {
     it('removes a field', () => {
       const data = makeVault();
-      deleteSecret(data, { scope: 'global' }, 'pg', 'password');
-      expect(data.secrets.global.pg.password).toBeUndefined();
-      expect(data.secrets.global.pg.url).toBeDefined(); // other field preserved
+      deleteSecret(data, 'pg', 'password');
+      expect(data.secrets.pg.password).toBeUndefined();
+      expect(data.secrets.pg.url).toBeDefined();
     });
     it('removes the service bucket when last field deleted', () => {
       const data = makeVault();
-      deleteSecret(data, { scope: 'env', envId: 'prod' }, 'redis', 'host');
-      expect(data.secrets.envs.prod.redis).toBeUndefined();
+      deleteSecret(data, 'redis', 'host');
+      expect(data.secrets.redis).toBeUndefined();
+    });
+  });
+
+  describe('deleteSecretValue', () => {
+    it('removes value for a specific env', () => {
+      const data = makeVault();
+      deleteSecretValue(data, 'pg', 'url', 'prod');
+      expect(data.secrets.pg.url.values.prod).toBeUndefined();
+      expect(data.secrets.pg.url.values._global).toBe('postgres://localhost');
     });
   });
 
   describe('moveSecret', () => {
     it('moves a secret to a new field name', () => {
       const data = makeVault();
-      moveSecret(data, { scope: 'global' }, 'pg', 'url', 'pg', 'connection_url');
-      expect(data.secrets.global.pg.url).toBeUndefined();
-      expect(data.secrets.global.pg.connection_url.value).toBe('postgres://localhost');
+      moveSecret(data, 'pg', 'url', 'pg', 'connection_url');
+      expect(data.secrets.pg.url).toBeUndefined();
+      expect(data.secrets.pg.connection_url.values._global).toBe('postgres://localhost');
     });
     it('moves a secret to a different service', () => {
       const data = makeVault();
-      moveSecret(data, { scope: 'global' }, 'pg', 'url', 'postgres', 'url');
-      expect(data.secrets.global.pg.url).toBeUndefined();
-      expect(data.secrets.global.postgres.url.value).toBe('postgres://localhost');
+      moveSecret(data, 'pg', 'url', 'postgres', 'url');
+      expect(data.secrets.pg.url).toBeUndefined();
+      expect(data.secrets.postgres.url.values._global).toBe('postgres://localhost');
     });
     it('refactors template references', () => {
       const data = makeVault();
-      moveSecret(data, { scope: 'global' }, 'pg', 'url', 'pg', 'connection_string');
+      moveSecret(data, 'pg', 'url', 'pg', 'connection_string');
       expect(data.templates.main.DATABASE_URL).toBe('${pg.connection_string}');
     });
     it('cleans up empty service bucket after move', () => {
       const data = makeVault();
-      deleteSecret(data, { scope: 'global' }, 'pg', 'password'); // leave only url
-      moveSecret(data, { scope: 'global' }, 'pg', 'url', 'postgres', 'url');
-      expect(data.secrets.global.pg).toBeUndefined();
+      deleteSecret(data, 'redis', 'host'); // already tested
+      // Now only pg remains — move last pg field
+      deleteSecret(data, 'pg', 'password');
+      moveSecret(data, 'pg', 'url', 'postgres', 'url');
+      expect(data.secrets.pg).toBeUndefined();
     });
     it('no-ops if source does not exist', () => {
       const data = makeVault();
-      moveSecret(data, { scope: 'global' }, 'pg', 'nonexistent', 'pg', 'other');
-      expect(data.secrets.global.pg.url).toBeDefined(); // unchanged
+      moveSecret(data, 'pg', 'nonexistent', 'pg', 'other');
+      expect(data.secrets.pg.url).toBeDefined();
+    });
+  });
+
+  describe('resolveValue', () => {
+    it('returns env value when present', () => {
+      const entry = { secret: true, values: { _global: 'default', prod: 'prod-val' } };
+      expect(resolveValue(entry, 'prod')).toBe('prod-val');
+    });
+    it('falls back to global when env value missing', () => {
+      const entry = { secret: true, values: { _global: 'default' } };
+      expect(resolveValue(entry, 'prod')).toBe('default');
+    });
+    it('falls back to global when env value is empty string', () => {
+      const entry = { secret: true, values: { _global: 'default', prod: '' } };
+      expect(resolveValue(entry, 'prod')).toBe('default');
+    });
+    it('returns undefined when no values', () => {
+      expect(resolveValue(null, 'prod')).toBeUndefined();
     });
   });
 });

@@ -18,25 +18,17 @@ export function buildSearchIndex(data, getEnvComment) {
     results.push({ type: 'env', id: env, label: env, comment, section: 'environments' });
   }
 
-  const addSecrets = (scope, envId) => {
-    const secrets = scope === 'global' ? data.secrets?.global : data.secrets?.envs?.[envId];
-    if (!secrets) return;
-    for (const [serviceId, fields] of Object.entries(secrets)) {
-      const svcLabel = data.services[serviceId]?.label || serviceId;
-      for (const field of Object.keys(fields)) {
-        results.push({
-          type: 'secret',
-          id: `${serviceId}:${field}`,
-          label: `${svcLabel} / ${field}`,
-          comment: envId ? `env: ${envId}` : 'global',
-          section: 'secrets',
-        });
-      }
+  for (const [serviceId, fields] of Object.entries(data.secrets || {})) {
+    const svcLabel = data.services[serviceId]?.label || serviceId;
+    for (const field of Object.keys(fields)) {
+      results.push({
+        type: 'secret',
+        id: `${serviceId}:${field}`,
+        label: `${svcLabel} / ${field}`,
+        comment: '',
+        section: 'secrets',
+      });
     }
-  };
-  addSecrets('global');
-  for (const envId of Object.keys(data.secrets?.envs || {})) {
-    addSecrets('env', envId);
   }
 
   for (const [key, val] of Object.entries(data.templates?.main || {})) {

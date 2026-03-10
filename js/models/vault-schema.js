@@ -2,6 +2,8 @@
 
 export const CURRENT_VERSION = 1;
 
+export const GLOBAL_ENV = '_global';
+
 export const DEFAULT_SETTINGS = {
   autolockMinutes: 5,
 };
@@ -13,10 +15,7 @@ export function createEmpty() {
     services: {},
     environments: [],
     environmentMeta: {},
-    secrets: {
-      global: {},
-      envs: {},
-    },
+    secrets: {},
     templates: { main: {} },
   };
 }
@@ -25,9 +24,7 @@ export function ensureStructure(data) {
   if (!data.services) data.services = {};
   if (!data.environments) data.environments = [];
   if (!data.environmentMeta) data.environmentMeta = {};
-  if (!data.secrets) data.secrets = { global: {}, envs: {} };
-  if (!data.secrets.global) data.secrets.global = {};
-  if (!data.secrets.envs) data.secrets.envs = {};
+  if (!data.secrets) data.secrets = {};
   if (!data.templates) data.templates = { main: {} };
   if (!data.templates.main) data.templates.main = {};
   if (!data.settings) data.settings = { ...DEFAULT_SETTINGS };

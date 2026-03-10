@@ -1,24 +1,18 @@
 // env-generator.js — .env generation from templates + resolved secrets
 
+import { GLOBAL_ENV } from '../models/vault-schema.js';
+
 export function resolveSecrets(vault, envId) {
   const resolved = {};
-
-  const globalSecrets = vault.secrets?.global || {};
-  for (const [serviceId, fields] of Object.entries(globalSecrets)) {
-    resolved[serviceId] = resolved[serviceId] || {};
+  for (const [serviceId, fields] of Object.entries(vault.secrets || {})) {
+    resolved[serviceId] = {};
     for (const [field, entry] of Object.entries(fields)) {
-      resolved[serviceId][field] = entry.value;
+      const envVal = entry.values?.[envId];
+      const globalVal = entry.values?.[GLOBAL_ENV];
+      const value = (envVal !== undefined && envVal !== '') ? envVal : globalVal;
+      if (value !== undefined) resolved[serviceId][field] = value;
     }
   }
-
-  const envSecrets = vault.secrets?.envs?.[envId] || {};
-  for (const [serviceId, fields] of Object.entries(envSecrets)) {
-    resolved[serviceId] = resolved[serviceId] || {};
-    for (const [field, entry] of Object.entries(fields)) {
-      resolved[serviceId][field] = entry.value;
-    }
-  }
-
   return resolved;
 }
 

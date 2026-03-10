@@ -10,8 +10,13 @@ function makeVault() {
   const data = createEmpty();
   data.services = { pg: { label: 'PostgreSQL', comment: '' } };
   data.environments = ['prod'];
-  data.secrets.global = { pg: { url: { value: 'x', secret: true }, password: { value: 'y', secret: true } } };
-  data.secrets.envs = { prod: { pg: { host: { value: 'db.prod', secret: false } } } };
+  data.secrets = {
+    pg: {
+      url: { secret: true, values: { _global: 'x' } },
+      password: { secret: true, values: { _global: 'y' } },
+      host: { secret: false, values: { prod: 'db.prod' } },
+    },
+  };
   data.templates = { main: { DATABASE_URL: '${pg.url}' } };
   return data;
 }
@@ -136,7 +141,7 @@ describe('mergeTemplate', () => {
 });
 
 describe('buildServiceFieldTree', () => {
-  it('collects fields from global and env secrets', () => {
+  it('collects fields from secrets', () => {
     const data = makeVault();
     const { fieldsByService } = buildServiceFieldTree(data);
     expect([...fieldsByService.pg]).toContain('url');

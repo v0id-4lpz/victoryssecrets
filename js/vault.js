@@ -150,22 +150,41 @@ export function getEnvironmentComment(envId) {
 
 // --- Secrets ---
 
-export function getSecretsAtLevel(level) {
-  return secretOps.getSecretsAtLevel(vaultData, level);
+export function getAllSecrets() {
+  return secretOps.getAllSecrets(vaultData);
 }
 
-export async function setSecret(level, serviceId, fieldName, value, isSecret = true) {
-  secretOps.setSecret(vaultData, level, serviceId, fieldName, value, isSecret);
+export function getSecret(serviceId, field) {
+  return secretOps.getSecret(vaultData, serviceId, field);
+}
+
+export async function setSecret(serviceId, field, opts) {
+  secretOps.setSecret(vaultData, serviceId, field, opts);
   await persist();
 }
 
-export async function deleteSecret(level, serviceId, fieldName) {
-  secretOps.deleteSecret(vaultData, level, serviceId, fieldName);
+export async function setSecretValue(serviceId, field, envId, value) {
+  secretOps.setSecretValue(vaultData, serviceId, field, envId, value);
   await persist();
 }
 
-export async function moveSecret(level, oldServiceId, oldField, newServiceId, newField) {
-  secretOps.moveSecret(vaultData, level, oldServiceId, oldField, newServiceId, newField);
+export async function setSecretFlag(serviceId, field, secret) {
+  secretOps.setSecretFlag(vaultData, serviceId, field, secret);
+  await persist();
+}
+
+export async function deleteSecret(serviceId, field) {
+  secretOps.deleteSecret(vaultData, serviceId, field);
+  await persist();
+}
+
+export async function deleteSecretValue(serviceId, field, envId) {
+  secretOps.deleteSecretValue(vaultData, serviceId, field, envId);
+  await persist();
+}
+
+export async function moveSecret(oldServiceId, oldField, newServiceId, newField) {
+  secretOps.moveSecret(vaultData, oldServiceId, oldField, newServiceId, newField);
   await persist();
 }
 
