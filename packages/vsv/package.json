@@ -1,0 +1,42 @@
+{
+  "name": "vsv",
+  "version": "0.1.0",
+  "description": "Victory's Secrets CLI — secrets manager",
+  "type": "module",
+  "main": "dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./types/vault": "./src/types/vault.ts",
+    "./models/vault-schema": "./src/models/vault-schema.ts",
+    "./models/validators": "./src/models/validators.ts",
+    "./models/template-refactor": "./src/models/template-refactor.ts",
+    "./services/service-ops": "./src/services/service-ops.ts",
+    "./services/environment-ops": "./src/services/environment-ops.ts",
+    "./services/secret-ops": "./src/services/secret-ops.ts",
+    "./services/template-ops": "./src/services/template-ops.ts",
+    "./services/settings-ops": "./src/services/settings-ops.ts",
+    "./services/env-generator": "./src/services/env-generator.ts",
+    "./services/search": "./src/services/search.ts"
+  },
+  "bin": {
+    "vsv": "dist/bin/vsv.js"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "commander": "^13.1.0",
+    "hash-wasm": "^4.12.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.27.3",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}

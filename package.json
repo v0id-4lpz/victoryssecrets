@@ -2,83 +2,13 @@
   "name": "victoryssecrets",
   "version": "2.0.0",
   "description": "Local secrets & config manager",
-  "main": "main.js",
+  "private": true,
+  "workspaces": ["packages/*"],
   "scripts": {
-    "css": "tailwindcss -i css/app.css -o css/dist.css --minify",
-    "css:watch": "tailwindcss -i css/app.css -o css/dist.css --watch",
-    "build:ts": "node build.mjs",
-    "typecheck": "tsc --noEmit",
-    "start": "npm run css && npm run build:ts && electron .",
-    "dev": "npm run css && npm run build:ts && electron . --dev",
-    "build": "npm run css && npm run build:ts && electron-builder",
-    "build:mac": "npm run css && npm run build:ts && electron-builder --mac",
-    "build:win": "npm run css && npm run build:ts && electron-builder --win",
-    "build:linux": "npm run css && npm run build:ts && electron-builder --linux",
-    "test": "npm run typecheck && vitest run",
-    "test:watch": "vitest"
+    "test": "npm run test --workspaces",
+    "typecheck": "npm run typecheck --workspaces"
   },
   "keywords": [],
   "author": "",
-  "license": "MIT",
-  "build": {
-    "appId": "com.victoryssecrets.app",
-    "productName": "VictorysSecrets",
-    "files": [
-      "main.js",
-      "preload.js",
-      "index.html",
-      "build/**/*",
-      "css/dist.css"
-    ],
-    "afterPack": "./afterPack.js",
-    "dmg": {
-      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
-    },
-    "mac": {
-      "target": [
-        "dmg",
-        "zip"
-      ],
-      "artifactName": "${productName}-${version}-${os}-${arch}-portable.${ext}",
-      "category": "public.app-category.developer-tools",
-      "identity": null,
-      "type": "development",
-      "icon": "assets/icon.icns"
-    },
-    "win": {
-      "target": [
-        "nsis",
-        "portable"
-      ],
-      "icon": "assets/icon.ico"
-    },
-    "nsis": {
-      "artifactName": "${productName}-${version}-${os}.${ext}"
-    },
-    "portable": {
-      "artifactName": "${productName}-${version}-${os}-portable.${ext}"
-    },
-    "appImage": {
-      "artifactName": "${productName}-${version}-${os}.${ext}"
-    },
-    "linux": {
-      "target": [
-        "AppImage",
-        "tar.gz"
-      ],
-      "artifactName": "${productName}-${version}-${os}-portable.${ext}"
-    }
-  },
-  "devDependencies": {
-    "@tailwindcss/cli": "^4.2.1",
-    "electron": "^40.8.0",
-    "electron-builder": "^26.8.1",
-    "esbuild": "^0.27.3",
-    "tailwindcss": "^4.2.1",
-    "typescript": "^5.9.3",
-    "vitest": "^4.0.18"
-  },
-  "dependencies": {
-    "hash-wasm": "^4.12.0"
-  }
+  "license": "MIT"
 }
