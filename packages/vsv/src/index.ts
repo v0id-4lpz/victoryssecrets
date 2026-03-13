@@ -14,7 +14,7 @@ export type {
 
 export * as vault from './vault';
 export * as crypto from './crypto';
-export { readVaultFile, writeVaultFile, validateVaultPath } from './storage';
+export { readVaultFile, writeVaultFile, fetchVaultFile, validateVaultPath, isRemoteUrl } from './storage';
 
 export * as serviceOps from './services/service-ops';
 export * as environmentOps from './services/environment-ops';
@@ -26,3 +26,5 @@ export * as search from './services/search';
 
 export { createEmpty, ensureStructure, CURRENT_VERSION, GLOBAL_ENV } from './models/vault-schema';
 export { sanitizeId, labelToId } from './models/validators';
+
+export { VsvClient, createClient } from './agent/client';

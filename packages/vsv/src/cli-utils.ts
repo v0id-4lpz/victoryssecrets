@@ -1,6 +1,20 @@
 // cli-utils.ts — CLI helpers (password prompt, etc.)
 
 import { createInterface } from 'node:readline';
+import { existsSync, readFileSync } from 'node:fs';
+import { getSocketPath } from './agent/protocol';
+
+let quietMode = false;
+
+export function setQuiet(quiet: boolean): void { quietMode = quiet; }
+
+export function warn(msg: string): void {
+  if (!quietMode) process.stderr.write(msg);
+}
+
+export function isAgentRunning(): boolean {
+  return existsSync(getSocketPath());
+}
 
 export function resolveFile(opts: { file?: string }): string {
   const filePath = opts.file || process.env['VSV_FILE'];
@@ -15,6 +29,16 @@ export async function promptPassword(prompt = 'Password: '): Promise<string> {
   // VSV_PASSWORD env var takes priority (CI/CD, scripts)
   const envPassword = process.env['VSV_PASSWORD'];
   if (envPassword) return envPassword;
+
+  // VSV_PASSWORD_FILE — read password from file (Docker secrets, K8s)
+  const passwordFile = process.env['VSV_PASSWORD_FILE'];
+  if (passwordFile) {
+    if (!existsSync(passwordFile)) {
+      process.stderr.write(`Error: password file not found: ${passwordFile}\n`);
+      process.exit(1);
+    }
+    return readFileSync(passwordFile, 'utf-8').trim();
+  }
 
   // If stdin is not a TTY (piped), read from stdin directly
   if (!process.stdin.isTTY) {

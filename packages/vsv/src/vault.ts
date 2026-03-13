@@ -3,7 +3,7 @@
 import { webcrypto } from 'node:crypto';
 import type { VaultData, VaultSettings, SecretEntry } from './types/vault';
 import { encrypt, decrypt, deriveKey, generateSalt } from './crypto';
-import { readVaultFile, writeVaultFile } from './storage';
+import { readVaultFile, writeVaultFile, fetchVaultFile, isRemoteUrl } from './storage';
 import { createEmpty, ensureStructure } from './models/vault-schema';
 import * as serviceOps from './services/service-ops';
 import * as environmentOps from './services/environment-ops';
@@ -17,6 +17,7 @@ let vaultData: VaultData | null = null;
 let cryptoKey: CKey | null = null;
 let keySalt: Uint8Array | null = null;
 let vaultPath: string | null = null;
+let remoteMode = false;
 
 // --- State ---
 
@@ -33,6 +34,10 @@ export function getPath(): string | null {
   return vaultPath;
 }
 
+export function isRemote(): boolean {
+  return remoteMode;
+}
+
 export async function create(filePath: string, password: string): Promise<VaultData> {
   const salt = generateSalt();
   cryptoKey = await deriveKey(password, salt);
@@ -44,17 +49,40 @@ export async function create(filePath: string, password: string): Promise<VaultD
 }
 
 export async function open(filePath: string, password: string): Promise<VaultData> {
-  const buffer = readVaultFile(filePath);
+  const remote = isRemoteUrl(filePath);
+  const buffer = remote ? await fetchVaultFile(filePath) : readVaultFile(filePath);
   const result = await decrypt(buffer, password);
   vaultData = ensureStructure(result.data);
   cryptoKey = result.key;
   keySalt = result.salt;
   vaultPath = filePath;
+  remoteMode = remote;
+  return vaultData;
+}
+
+export async function refresh(): Promise<VaultData> {
+  if (!vaultPath || !cryptoKey || !keySalt) throw new Error('Vault not open');
+  if (!remoteMode) throw new Error('Refresh is only supported for remote vaults');
+  const buffer = await fetchVaultFile(vaultPath);
+  const raw = new Uint8Array(buffer);
+  const salt = raw.slice(0, 16);
+  // If salt changed, the password was changed — we can't decrypt with our key
+  if (salt.length !== keySalt.length || !salt.every((b, i) => b === keySalt![i])) {
+    throw new Error('Remote vault password has changed — restart agent with new password');
+  }
+  const iv = raw.slice(16, 28);
+  const ciphertext = raw.slice(28);
+  const decrypted = await webcrypto.subtle.decrypt({ name: 'AES-GCM', iv }, cryptoKey, ciphertext);
+  const json = new TextDecoder().decode(decrypted);
+  let data;
+  try { data = JSON.parse(json); } catch { throw new Error('Vault data is corrupted (invalid JSON)'); }
+  vaultData = ensureStructure(data);
   return vaultData;
 }
 
 export async function persist(): Promise<void> {
   if (!vaultData || !cryptoKey || !vaultPath) throw new Error('Vault not open');
+  if (remoteMode) throw new Error('Cannot write to a remote vault (read-only)');
   const encrypted = await encrypt(vaultData, cryptoKey, keySalt!);
   writeVaultFile(vaultPath, encrypted);
 }
@@ -81,6 +109,7 @@ export function lock(): void {
   cryptoKey = null;
   keySalt = null;
   vaultPath = null;
+  remoteMode = false;
 }
 
 // --- Services ---
@@ -152,6 +181,13 @@ export function getAllSecrets(): Record<string, Record<string, SecretEntry>> {
 
 export function getSecret(serviceId: string, field: string): SecretEntry | null {
   return secretOps.getSecret(getData(), serviceId, field);
+}
+
+export function get(ref: string, envId: string): string | null {
+  const dotIndex = ref.indexOf('.');
+  if (dotIndex === -1) throw new Error(`Invalid reference "${ref}" (expected service.field)`);
+  const entry = getSecret(ref.slice(0, dotIndex), ref.slice(dotIndex + 1));
+  return secretOps.resolveValue(entry, envId) ?? null;
 }
 
 export async function setSecret(serviceId: string, field: string, opts?: { secret?: boolean; values?: Record<string, string> }): Promise<void> {

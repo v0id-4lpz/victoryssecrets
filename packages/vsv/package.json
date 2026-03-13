@@ -19,7 +19,8 @@
     "./services/template-ops": "./src/services/template-ops.ts",
     "./services/settings-ops": "./src/services/settings-ops.ts",
     "./services/env-generator": "./src/services/env-generator.ts",
-    "./services/search": "./src/services/search.ts"
+    "./services/search": "./src/services/search.ts",
+    "./client": "./src/agent/client.ts"
   },
   "bin": {
     "vsv": "dist/bin/vsv.js"

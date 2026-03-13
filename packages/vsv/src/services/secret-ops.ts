@@ -12,7 +12,8 @@ export function getSecret(data: VaultData, serviceId: string, field: string): Se
   return data.secrets?.[serviceId]?.[field] || null;
 }
 
-export function setSecret(data: VaultData, serviceId: string, field: string, { secret = true, values = {} }: { secret?: boolean; values?: Record<string, string> } = {}): VaultData {
+export function setSecret(data: VaultData, serviceId: string, field: string, opts?: { secret?: boolean; values?: Record<string, string> } | null): VaultData {
+  const { secret = true, values = {} } = opts ?? {};
   if (!data.secrets[serviceId]) data.secrets[serviceId] = {};
   data.secrets[serviceId]![field] = { secret, values };
   return data;
