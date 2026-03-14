@@ -15,6 +15,7 @@ const VAULT_MUTATIONS = new Set([
   'setSecret', 'setSecretValue', 'setSecretFlag', 'deleteSecret', 'deleteSecretValue', 'moveSecret',
   'setTemplateEntry', 'deleteTemplateEntry', 'clearTemplate', 'replaceTemplate', 'mergeTemplate',
   'setAutolockMinutes',
+  'setReadOnly',
 ]);
 
 function createWindow() {
@@ -98,6 +99,7 @@ function setupIPC() {
   ipcMain.handle('vault:get-data', () => vault.isUnlocked() ? vault.getData() : null);
   ipcMain.handle('vault:is-unlocked', () => vault.isUnlocked());
   ipcMain.handle('vault:get-path', () => vault.getPath());
+  ipcMain.handle('vault:is-read-only', () => vault.isReadOnly());
 
   // --- Generic vault mutation dispatcher ---
 

@@ -34,7 +34,7 @@ function renderTable(entries: EnvEntry[]): string {
           <td class="py-1.5 pr-4 font-mono text-indigo-400 whitespace-nowrap">${esc(key)}</td>
           <td class="py-1.5 pr-4 font-mono max-w-xs truncate">${value
             ? secret
-              ? `<span class="group/val cursor-default"><span class="text-gray-500 group-hover/val:hidden select-none">••••••••</span><span class="text-green-400 hidden group-hover/val:inline" title="${esc(value)}">${esc(value)}</span></span>`
+              ? `<span class="group/val cursor-default"><span class="text-gray-500 group-hover/val:hidden select-none">••••••••</span><span class="text-green-400 hidden group-hover/val:inline">${esc(value)}</span></span>`
               : `<span class="text-green-400">${esc(value)}</span>`
             : '<span class="text-gray-500">—</span>'}</td>
           <td class="py-1.5">${sourceBadge(source)}</td>

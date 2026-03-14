@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getSettings, setAutolockMinutes } from '../../src/services/settings-ops';
+import { getSettings, setAutolockMinutes, setReadOnly } from '../../src/services/settings-ops';
 import { createEmpty, DEFAULT_SETTINGS } from '../../src/models/vault-schema';
 
 describe('settings-ops', () => {
@@ -34,5 +34,23 @@ describe('settings-ops', () => {
   it('setAutolockMinutes rejects non-number', () => {
     const data = createEmpty();
     expect(() => setAutolockMinutes(data, 'abc' as any)).toThrow();
+  });
+
+  it('default readOnly is false', () => {
+    const data = createEmpty();
+    expect(getSettings(data).readOnly).toBe(false);
+  });
+
+  it('setReadOnly enables read-only', () => {
+    const data = createEmpty();
+    setReadOnly(data, true);
+    expect(data.settings.readOnly).toBe(true);
+  });
+
+  it('setReadOnly disables read-only', () => {
+    const data = createEmpty();
+    setReadOnly(data, true);
+    setReadOnly(data, false);
+    expect(data.settings.readOnly).toBe(false);
   });
 });

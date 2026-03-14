@@ -38,6 +38,10 @@ export function isRemote(): boolean {
   return remoteMode;
 }
 
+export function isReadOnly(): boolean {
+  return remoteMode || (vaultData?.settings.readOnly === true);
+}
+
 export async function create(filePath: string, password: string): Promise<VaultData> {
   const salt = generateSalt();
   cryptoKey = await deriveKey(password, salt);
@@ -83,6 +87,7 @@ export async function refresh(): Promise<VaultData> {
 export async function persist(): Promise<void> {
   if (!vaultData || !cryptoKey || !vaultPath) throw new Error('Vault not open');
   if (remoteMode) throw new Error('Cannot write to a remote vault (read-only)');
+  if (vaultData.settings.readOnly) throw new Error('Vault is read-only');
   const encrypted = await encrypt(vaultData, cryptoKey, keySalt!);
   writeVaultFile(vaultPath, encrypted);
 }
@@ -91,10 +96,8 @@ export async function changePassword(currentPassword: string, newPassword: strin
   if (!vaultData || !cryptoKey || !keySalt) throw new Error('Vault not open');
   const testKey = await deriveKey(currentPassword, keySalt);
   try {
-    const testData = new TextEncoder().encode('test');
-    const iv = webcrypto.getRandomValues(new Uint8Array(12));
-    const enc = await webcrypto.subtle.encrypt({ name: 'AES-GCM', iv }, testKey, testData);
-    await webcrypto.subtle.decrypt({ name: 'AES-GCM', iv }, cryptoKey, enc);
+    const encrypted = await encrypt(vaultData, testKey, keySalt);
+    await decrypt(encrypted.buffer as ArrayBuffer, currentPassword);
   } catch {
     throw new Error('Wrong password');
   }
@@ -260,4 +263,15 @@ export function getSettings(): VaultSettings {
 export async function setAutolockMinutes(minutes: number): Promise<void> {
   settingsOps.setAutolockMinutes(getData(), minutes);
   await persist();
+}
+
+export async function setReadOnly(readOnly: boolean): Promise<void> {
+  const data = getData();
+  if (!cryptoKey || !vaultPath) throw new Error('Vault not open');
+  if (remoteMode) throw new Error('Cannot write to a remote vault');
+  // Temporarily clear readOnly to allow persist, then set the new value
+  data.settings.readOnly = false;
+  settingsOps.setReadOnly(data, readOnly);
+  const encrypted = await encrypt(data, cryptoKey, keySalt!);
+  writeVaultFile(vaultPath, encrypted);
 }

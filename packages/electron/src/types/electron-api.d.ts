@@ -19,6 +19,7 @@ interface ElectronAPI {
   vaultGetData(): Promise<VaultData | null>;
   vaultIsUnlocked(): Promise<boolean>;
   vaultGetPath(): Promise<string | null>;
+  vaultIsReadOnly(): Promise<boolean>;
 
   // Generic vault mutation
   vaultCall(method: string, args: unknown[]): Promise<VaultData>;

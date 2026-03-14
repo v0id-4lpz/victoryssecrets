@@ -1,6 +1,7 @@
 // app.ts — main orchestrator
 
 import * as vault from './vault';
+import { setOnMutationError } from './vault';
 import { initTheme, toggleTheme } from './ui/theme';
 import { renderButton } from './ui/components/button';
 import { icons } from './ui/components/icon';
@@ -134,6 +135,7 @@ function renderMain(): string {
         <div class="pl-16 flex items-baseline gap-3 min-w-0">
           <h1 class="text-xl font-bold shrink-0">Victory's Secrets</h1>
           <span class="text-xs text-gray-400 truncate">${shortenPath(vault.getPath())}</span>
+          ${vault.isReadOnly() ? '<span class="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300">Read-only</span>' : ''}
           ${updateInfo ? `<a id="update-link-header" href="#" class="shrink-0 no-drag inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition">${icons.arrowUp('w-3 h-3')} v${esc(updateInfo.version)}</a>` : ''}
         </div>
         <div class="no-drag flex items-center gap-3">
@@ -229,6 +231,8 @@ function render(): void {
 }
 
 // --- Init ---
+setOnMutationError((msg) => showToast(msg, 'error'));
+
 initTheme();
 render();
 

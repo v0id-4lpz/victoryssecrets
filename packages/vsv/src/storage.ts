@@ -7,7 +7,7 @@ const MAX_VAULT_SIZE = 10 * 1024 * 1024; // 10 MB
 const VAULT_EXTENSION = '.vsv';
 
 export function isRemoteUrl(filePath: string): boolean {
-  return filePath.startsWith('http://') || filePath.startsWith('https://');
+  return filePath.startsWith('https://');
 }
 
 export function validateVaultPath(filePath: string): boolean {

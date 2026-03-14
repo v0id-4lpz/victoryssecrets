@@ -45,6 +45,11 @@ describe('vault-schema', () => {
       expect(data.settings.autolockMinutes).toBe(DEFAULT_SETTINGS.autolockMinutes);
     });
 
+    it('migrates vault without readOnly setting', () => {
+      const data = ensureStructure({ settings: { autolockMinutes: 10 } as any });
+      expect(data.settings.readOnly).toBe(false);
+    });
+
     it('preserves existing data', () => {
       const data = ensureStructure({
         services: { pg: { label: 'Postgres', comment: '' } },

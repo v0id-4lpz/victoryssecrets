@@ -1,10 +1,26 @@
+// Allow self-signed certs for test HTTPS server
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 import { describe, it, expect, afterEach } from 'vitest';
-import { createServer, type Server } from 'node:http';
+import { createServer as createHttpsServer, type Server } from 'node:https';
 import { readFileSync, existsSync, unlinkSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 import * as vault from '../src/vault';
 
 const TMP = '/tmp/test-remote-vault.vsv';
 const PW = 'testpassword1234';
+const CERT_DIR = '/tmp/test-remote-vault-certs';
+
+// Generate self-signed cert for tests
+function ensureCerts(): { key: string; cert: string } {
+  if (!existsSync(`${CERT_DIR}/key.pem`)) {
+    execSync(`mkdir -p ${CERT_DIR} && openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -keyout ${CERT_DIR}/key.pem -out ${CERT_DIR}/cert.pem -days 1 -subj '/CN=localhost' 2>/dev/null`);
+  }
+  return {
+    key: readFileSync(`${CERT_DIR}/key.pem`, 'utf-8'),
+    cert: readFileSync(`${CERT_DIR}/cert.pem`, 'utf-8'),
+  };
+}
 
 function cleanupFiles() {
   try { vault.lock(); } catch { /* ignore */ }
@@ -15,13 +31,14 @@ function cleanupFiles() {
 function serveFile(filePath: string): Promise<{ server: Server; url: string }> {
   return new Promise((resolve) => {
     const data = readFileSync(filePath);
-    const srv = createServer((req, res) => {
+    const { key, cert } = ensureCerts();
+    const srv = createHttpsServer({ key, cert }, (req, res) => {
       res.writeHead(200, { 'Content-Type': 'application/octet-stream' });
       res.end(data);
     });
     srv.listen(0, '127.0.0.1', () => {
       const addr = srv.address() as { port: number };
-      resolve({ server: srv, url: `http://127.0.0.1:${addr.port}/vault.vsv` });
+      resolve({ server: srv, url: `https://127.0.0.1:${addr.port}/vault.vsv` });
     });
   });
 }
@@ -59,7 +76,7 @@ describe('remote vault', () => {
     expect(vault.isRemote()).toBe(false);
   });
 
-  it('refresh re-fetches remote vault data', async () => {
+  it('refresh re-fetches remote vault data', { timeout: 30000 }, async () => {
     // Create vault with initial data
     await vault.create(TMP, PW);
     await vault.addService('db', 'Database');

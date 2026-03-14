@@ -54,9 +54,25 @@ export async function changePassword(currentPassword: string, newPassword: strin
 
 // --- Generic mutation helper ---
 
+let onMutationError: ((message: string) => void) | null = null;
+
+export function setOnMutationError(cb: (message: string) => void): void {
+  onMutationError = cb;
+}
+
+export function guardReadOnly(): boolean {
+  if (isReadOnly()) { onMutationError?.('Read-only vault'); return true; }
+  return false;
+}
+
 async function call(method: string, ...args: unknown[]): Promise<void> {
-  const data = await window.electronAPI!.vaultCall(method, args);
-  cachedData = ensureStructure(data);
+  try {
+    const data = await window.electronAPI!.vaultCall(method, args);
+    cachedData = ensureStructure(data);
+  } catch (e: any) {
+    onReadOnlyBlocked?.(e.message);
+    throw e;
+  }
 }
 
 // --- Services ---
@@ -177,6 +193,14 @@ export function getSettings(): VaultSettings {
   return settingsOps.getSettings(getData());
 }
 
+export function isReadOnly(): boolean {
+  return cachedData?.settings.readOnly === true;
+}
+
 export async function setAutolockMinutes(minutes: number): Promise<void> {
   await call('setAutolockMinutes', minutes);
+}
+
+export async function setReadOnly(readOnly: boolean): Promise<void> {
+  await call('setReadOnly', readOnly);
 }

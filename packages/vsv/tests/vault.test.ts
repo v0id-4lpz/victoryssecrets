@@ -79,6 +79,51 @@ describe('vault (Node.js pure)', () => {
     });
   });
 
+  describe('read-only', () => {
+    it('persist throws when vault is read-only', async () => {
+      await vault.create(TMP, 'pw');
+      await vault.setReadOnly(true);
+      vault.lock();
+
+      await vault.open(TMP, 'pw');
+      expect(vault.isReadOnly()).toBe(true);
+      await expect(vault.addService('api', 'API')).rejects.toThrow('read-only');
+    });
+
+    it('setReadOnly can toggle off', async () => {
+      await vault.create(TMP, 'pw');
+      await vault.setReadOnly(true);
+      await vault.setReadOnly(false);
+      expect(vault.isReadOnly()).toBe(false);
+      await vault.addService('api', 'API');
+      expect(vault.hasService('api')).toBe(true);
+    });
+
+    it('isReadOnly returns false for fresh vault', async () => {
+      await vault.create(TMP, 'pw');
+      expect(vault.isReadOnly()).toBe(false);
+    });
+
+    it('changePassword throws when vault is read-only', { timeout: 30000 }, async () => {
+      await vault.create(TMP, 'pw');
+      await vault.setReadOnly(true);
+      vault.lock();
+
+      await vault.open(TMP, 'pw');
+      await expect(vault.changePassword('pw', 'newpw')).rejects.toThrow('read-only');
+    });
+
+    it('read-only persists across lock/reopen', { timeout: 15000 }, async () => {
+      await vault.create(TMP, 'pw');
+      await vault.setReadOnly(true);
+      vault.lock();
+
+      await vault.open(TMP, 'pw');
+      expect(vault.getData().settings.readOnly).toBe(true);
+      expect(vault.isReadOnly()).toBe(true);
+    });
+  });
+
   describe('cross-compatibility', () => {
     it('vault created by CLI can be re-opened', async () => {
       // Create, modify, persist, lock, re-open — full lifecycle

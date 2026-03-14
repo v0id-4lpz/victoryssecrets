@@ -1,6 +1,7 @@
 // services.ts — services section
 
 import * as vault from '../vault';
+import { guardReadOnly } from '../vault';
 import { esc } from './helpers';
 import { renderDeleteButton, bindDeleteButtons } from './components/delete-button';
 import { renderEditableRow, bindEditableRows } from './components/editable-row';
@@ -86,18 +87,21 @@ function startServiceForm(container: HTMLElement, render: () => void, { id, labe
 
 export function bindServices(render: () => void): void {
   document.getElementById('btn-add-service')!.onclick = () => {
+    if (guardReadOnly()) return;
     const list = document.getElementById('service-list')!;
     const row = insertNewRow(list);
     startServiceForm(row, render);
   };
 
   bindEditableRows('[data-edit-service]', (row) => {
+    if (guardReadOnly()) return;
     const id = row.dataset.editService!;
     const service = vault.getData().services[id];
     startServiceForm(row, render, { id, label: service?.label, comment: service?.comment });
   }, ['[data-delete-service]']);
 
   bindDeleteButtons('[data-delete-service]', async (btn) => {
+    if (guardReadOnly()) return;
     if (confirm(`Delete service "${btn.dataset.deleteService}"?`)) {
       await vault.deleteService(btn.dataset.deleteService!);
       render();

@@ -1,6 +1,7 @@
 // templates.ts — templates section + value picker
 
 import * as vault from '../vault';
+import { guardReadOnly } from '../vault';
 import { esc } from './helpers';
 import { renderButton } from './components/button';
 import { renderDeleteButton, bindDeleteButtons } from './components/delete-button';
@@ -238,7 +239,7 @@ async function handleImportEnv(render: () => void): Promise<void> {
 }
 
 export function bindTemplates(render: () => void): void {
-  document.getElementById('btn-import-env')?.addEventListener('click', () => handleImportEnv(render));
+  document.getElementById('btn-import-env')?.addEventListener('click', () => { if (!guardReadOnly()) handleImportEnv(render); });
 
   const filterInput = document.getElementById('tpl-filter') as HTMLInputElement | null;
   if (filterInput) {
@@ -252,6 +253,7 @@ export function bindTemplates(render: () => void): void {
   }
 
   document.getElementById('btn-clear-tpl')?.addEventListener('click', async () => {
+    if (guardReadOnly()) return;
     if (confirm('Clear the entire template?')) {
       await vault.clearTemplate();
       render();
@@ -260,6 +262,7 @@ export function bindTemplates(render: () => void): void {
 
   document.getElementById('btn-toggle-text-mode')?.addEventListener('click', async () => {
     if (textMode) {
+      if (guardReadOnly()) return;
       await saveTextMode();
     }
     textMode = !textMode;
@@ -267,6 +270,7 @@ export function bindTemplates(render: () => void): void {
   });
 
   document.getElementById('btn-add-tpl-entry')?.addEventListener('click', () => {
+    if (guardReadOnly()) return;
     const list = document.getElementById('tpl-entry-list')!;
     const row = document.createElement('div');
     row.className = 'group flex items-center justify-between p-2 -mx-2 rounded-lg border border-indigo-500/50 transition';
@@ -275,12 +279,14 @@ export function bindTemplates(render: () => void): void {
   });
 
   bindEditableRows('[data-edit-tpl]', (row) => {
+    if (guardReadOnly()) return;
     const key = row.dataset.editTpl!;
     const tpl = vault.getTemplate();
     startTplForm(row, render, { key, value: tpl[key] || '' });
   }, ['[data-delete-tpl]']);
 
   bindDeleteButtons('[data-delete-tpl]', async (btn) => {
+    if (guardReadOnly()) return;
     await vault.deleteTemplateEntry(btn.dataset.deleteTpl!);
     render();
   });

@@ -1,5 +1,6 @@
 export interface VaultSettings {
   autolockMinutes: number;
+  readOnly: boolean;
 }
 
 export interface Service {

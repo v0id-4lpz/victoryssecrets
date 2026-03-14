@@ -1,6 +1,7 @@
 // secrets.ts — secrets section + generator modal
 
 import * as vault from '../vault';
+import { guardReadOnly } from '../vault';
 import { GLOBAL_ENV } from 'vsv/models/vault-schema';
 import { generatePassword, generateBase64, generateHex, generateUUID } from '../generator';
 import { esc, INPUT_CLS } from './helpers';
@@ -296,6 +297,7 @@ function bindGenerator(): void {
 
 export function bindSecrets(render: () => void): void {
   document.getElementById('btn-add-secret')!.onclick = () => {
+    if (guardReadOnly()) return;
     const list = document.getElementById('secret-list')!;
     const row = document.createElement('div');
     row.className = 'group flex items-center justify-between p-4 mb-3 rounded-lg bg-white dark:bg-gray-900 border border-indigo-500/50 transition';
@@ -320,12 +322,14 @@ export function bindSecrets(render: () => void): void {
   });
 
   bindEditableRows('[data-edit-secret]', (row) => {
+    if (guardReadOnly()) return;
     const [serviceId, field] = row.dataset.editSecret!.split(':');
     const entry = vault.getSecret(serviceId!, field!);
     startSecretForm(row, render, { serviceId, field, entry: entry || undefined });
   }, ['[data-remove-secret]', '[data-copy-env]']);
 
   bindDeleteButtons('[data-remove-secret]', async (btn) => {
+    if (guardReadOnly()) return;
     const [serviceId, field] = btn.dataset.removeSecret!.split(':');
     await vault.deleteSecret(serviceId!, field!);
     render();

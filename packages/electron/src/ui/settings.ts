@@ -7,6 +7,15 @@ import { showToast } from './components/toast';
 import { esc, shortenPath, INPUT_CLS } from './helpers';
 import { setAutolockMinutes } from '../autolock';
 
+function renderToggle(id: string, checked: boolean, disabled = false): string {
+  return `<button id="${id}" role="switch" aria-checked="${checked}" ${disabled ? 'disabled' : ''}
+    class="relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition cursor-pointer
+      ${checked ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'}
+      ${disabled ? 'opacity-50 cursor-not-allowed' : ''}">
+    <span class="pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform transition ${checked ? 'translate-x-5' : 'translate-x-0'}"></span>
+  </button>`;
+}
+
 export function renderSettings(render: () => void): string {
   const settings = vault.getSettings();
   const data = vault.getData();
@@ -47,6 +56,14 @@ export function renderSettings(render: () => void): string {
             </select>
           </div>
 
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-sm">Read-only mode</span>
+              <p class="text-xs text-gray-400">Prevent accidental modifications</p>
+            </div>
+            ${renderToggle('settings-vault-ro', settings.readOnly)}
+          </div>
+
           <div class="border-t border-gray-200 dark:border-gray-700 pt-5 space-y-3">
             <h4 class="text-sm font-medium">Change password</h4>
             <input id="chpw-current" type="password" placeholder="Current password" class="w-full ${INPUT_CLS}" />
@@ -72,6 +89,20 @@ export function bindSettings(render: () => void): void {
     setAutolockMinutes(minutes);
     showToast(`Auto-lock: ${minutes} min`, 'success');
   };
+
+  const vaultRoBtn = document.getElementById('settings-vault-ro');
+  if (vaultRoBtn) {
+    vaultRoBtn.onclick = async () => {
+      const current = vaultRoBtn.getAttribute('aria-checked') === 'true';
+      try {
+        await vault.setReadOnly(!current);
+        showToast(`Vault read-only: ${!current ? 'on' : 'off'}`, 'success');
+        render();
+      } catch (e) {
+        showToast((e as Error).message, 'error');
+      }
+    };
+  }
 
   const errorEl = document.getElementById('chpw-error')!;
   const successEl = document.getElementById('chpw-success')!;

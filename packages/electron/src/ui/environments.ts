@@ -1,6 +1,7 @@
 // environments.ts — environments section
 
 import * as vault from '../vault';
+import { guardReadOnly } from '../vault';
 import { esc } from './helpers';
 import { renderDeleteButton, bindDeleteButtons } from './components/delete-button';
 import { renderEditableRow, bindEditableRows } from './components/editable-row';
@@ -69,18 +70,21 @@ function startEnvForm(container: HTMLElement, render: () => void, { id, comment 
 
 export function bindEnvironments(render: () => void): void {
   document.getElementById('btn-add-env')!.onclick = () => {
+    if (guardReadOnly()) return;
     const list = document.getElementById('env-list')!;
     const row = insertNewRow(list);
     startEnvForm(row, render);
   };
 
   bindEditableRows('[data-edit-env]', (row) => {
+    if (guardReadOnly()) return;
     const id = row.dataset.editEnv!;
     const comment = vault.getEnvironmentComment(id);
     startEnvForm(row, render, { id, comment });
   }, ['[data-delete-env]']);
 
   bindDeleteButtons('[data-delete-env]', async (btn) => {
+    if (guardReadOnly()) return;
     if (confirm(`Delete environment "${btn.dataset.deleteEnv}"?`)) {
       await vault.deleteEnvironment(btn.dataset.deleteEnv!);
       render();

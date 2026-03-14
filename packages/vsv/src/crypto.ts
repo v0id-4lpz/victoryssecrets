@@ -21,7 +21,7 @@ export async function deriveKey(password: string, salt: Uint8Array): Promise<CKe
     password,
     salt,
     parallelism: 4,
-    iterations: 3,
+    iterations: 8,
     memorySize: 262144, // 256 MB
     hashLength: 32,
     outputType: 'binary',

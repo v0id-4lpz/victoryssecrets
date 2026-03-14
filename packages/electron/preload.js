@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   vaultGetData: () => ipcRenderer.invoke('vault:get-data'),
   vaultIsUnlocked: () => ipcRenderer.invoke('vault:is-unlocked'),
   vaultGetPath: () => ipcRenderer.invoke('vault:get-path'),
+  vaultIsReadOnly: () => ipcRenderer.invoke('vault:is-read-only'),
 
   // Generic vault mutation (method name + args array)
   vaultCall: (method, args) => ipcRenderer.invoke('vault:call', method, args),

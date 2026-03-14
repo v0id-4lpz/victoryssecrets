@@ -13,3 +13,7 @@ export function setAutolockMinutes(data: VaultData, minutes: number): void {
   }
   data.settings.autolockMinutes = minutes;
 }
+
+export function setReadOnly(data: VaultData, readOnly: boolean): void {
+  data.settings.readOnly = !!readOnly;
+}

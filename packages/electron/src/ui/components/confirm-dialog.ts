@@ -1,5 +1,7 @@
 // confirm-dialog.ts — modal dialog with custom buttons
 
+import { esc } from '../helpers';
+
 interface DialogButton {
   label: string;
   value: string;
@@ -31,7 +33,7 @@ export function showConfirmDialog({ title, message, buttons }: DialogOptions): P
     backdrop.innerHTML = `
       <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-md w-full mx-4">
         <h3 class="text-base font-semibold mb-2">${title}</h3>
-        ${message ? `<p class="text-sm text-gray-500 dark:text-gray-400 mb-4">${message}</p>` : ''}
+        ${message ? `<p class="text-sm text-gray-500 dark:text-gray-400 mb-4">${esc(message)}</p>` : ''}
         <div class="flex justify-end gap-2">${buttonsHtml}</div>
       </div>`;
 

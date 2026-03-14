@@ -8,6 +8,7 @@ export const GLOBAL_ENV = '_global';
 
 export const DEFAULT_SETTINGS: VaultSettings = {
   autolockMinutes: 5,
+  readOnly: false,
 };
 
 export function createEmpty(): VaultData {
@@ -29,5 +30,6 @@ export function ensureStructure(data: Partial<VaultData>): VaultData {
   if (!data.templates.main) data.templates.main = {};
   if (!data.settings) data.settings = { ...DEFAULT_SETTINGS };
   if (data.settings.autolockMinutes == null) data.settings.autolockMinutes = DEFAULT_SETTINGS.autolockMinutes;
+  if (data.settings.readOnly == null) data.settings.readOnly = DEFAULT_SETTINGS.readOnly;
   return data as VaultData;
 }
