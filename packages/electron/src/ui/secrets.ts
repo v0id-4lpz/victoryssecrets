@@ -25,7 +25,7 @@ export function clearSecretStore(): void {
   if (lastCopiedValue) {
     navigator.clipboard.readText().then(current => {
       if (current === lastCopiedValue) navigator.clipboard.writeText('');
-    }).catch(() => {});
+    }).catch((e) => console.warn('Clipboard clear failed:', e));
     lastCopiedValue = null;
   }
   secretValueStore.clear();
@@ -124,7 +124,7 @@ function startSecretForm(container: HTMLElement, render: () => void, { serviceId
   const allEnvs = [{ id: GLOBAL_ENV, label: 'Global' }, ...envs.map(e => ({ id: e, label: e }))];
   const valueRows = allEnvs.map(env => {
     const val = entry?.values?.[env.id] || '';
-    const genBtnHtml = renderButton(icons.refresh(), { variant: 'secondary', cls: '!px-2 !py-1 shrink-0', attrs: `data-inline-gen="${env.id}"`, title: 'Generate' });
+    const genBtnHtml = renderButton(icons.refresh(), { variant: 'secondary', cls: '!px-2 !py-1 shrink-0', attrs: `data-inline-gen="${env.id}"`, title: 'Generate', rawHtml: true });
     return [
       { html: `<span class="text-xs text-gray-400 w-16 shrink-0">${esc(env.label)}</span>` },
       { name: `val_${env.id}`, value: val, placeholder: `Value for ${env.label}`, type: isSecret ? 'password' : 'text', cls: 'flex-1 font-mono' },
@@ -257,7 +257,9 @@ function bindGenerator(): void {
   const modal = document.getElementById('generator-modal')!;
   document.getElementById('gen-cancel')!.onclick = () => modal.classList.add('hidden');
   document.getElementById('gen-use')!.onclick = () => {
-    if (generatorTargetInput) generatorTargetInput.value = document.getElementById('gen-preview')!.textContent!;
+    if (generatorTargetInput && document.contains(generatorTargetInput)) {
+      generatorTargetInput.value = document.getElementById('gen-preview')!.textContent!;
+    }
     generatorTargetInput = null;
     modal.classList.add('hidden');
   };
@@ -316,7 +318,7 @@ export function bindSecrets(render: () => void): void {
       setTimeout(() => {
         navigator.clipboard.readText().then(current => {
           if (current === val) navigator.clipboard.writeText('');
-        }).catch(() => {});
+        }).catch((e) => console.warn('Clipboard auto-clear failed:', e));
       }, CLIPBOARD_CLEAR_DELAY);
     };
   });

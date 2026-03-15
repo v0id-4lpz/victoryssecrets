@@ -4,10 +4,13 @@
 export let currentSection = 'services';
 export let selectedEnv: string | null = null;
 export let updateInfo: { version: string; url: string } | null = null;
+let _editing = false;
 
 export function setCurrentSection(v: string): void { currentSection = v; }
 export function setSelectedEnv(v: string | null): void { selectedEnv = v; }
 export function setUpdateInfo(v: { version: string; url: string } | null): void { updateInfo = v; }
+export function setEditing(v: boolean): void { _editing = v; }
+export function isEditing(): boolean { return _editing; }
 
 // --- HTML escape ---
 export function esc(str: string): string {
@@ -27,21 +30,17 @@ export function fileName(filePath: string): string {
 export function dirName(filePath: string): string {
   const parts = filePath.split(/[/\\]/);
   parts.pop();
-  let dir = parts.join('/');
-  try {
-    if (dir.startsWith('/Users/')) {
-      dir = '~/' + dir.split('/').slice(3).join('/');
-    }
-  } catch {}
+  const dir = parts.join('/');
+  if (dir.startsWith('/Users/')) {
+    return '~/' + dir.split('/').slice(3).join('/');
+  }
   return dir;
 }
 
 export function shortenPath(filePath: string | null): string {
   if (!filePath) return '';
-  try {
-    if (filePath.startsWith('/Users/')) {
-      return '~/' + filePath.split('/').slice(3).join('/');
-    }
-  } catch {}
+  if (filePath.startsWith('/Users/')) {
+    return '~/' + filePath.split('/').slice(3).join('/');
+  }
   return filePath;
 }

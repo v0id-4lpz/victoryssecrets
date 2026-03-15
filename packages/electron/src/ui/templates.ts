@@ -14,6 +14,7 @@ import { parseTemplateText, serializeTemplate, buildServiceFieldTree } from 'vsv
 
 let textMode = false;
 let activeEditCancel: ((fullRender?: boolean) => void) | null = null;
+let activeDropdownCleanup: (() => void) | null = null;
 
 function renderValuePickerDropdown(): string {
   const { services, fieldsByService } = buildServiceFieldTree(vault.getData());
@@ -122,6 +123,7 @@ function startTplForm(container: HTMLElement, render: () => void, { key, value }
   const originalHtml = container.innerHTML;
   const cancel = (fullRender = true) => {
     if (activeEditCancel === cancel) activeEditCancel = null;
+    if (activeDropdownCleanup) { activeDropdownCleanup(); activeDropdownCleanup = null; }
     if (fullRender) { render(); return; }
     if (isCreate) container.remove();
     else container.innerHTML = originalHtml;
@@ -188,6 +190,7 @@ function startTplForm(container: HTMLElement, render: () => void, { key, value }
           }
         };
         document.addEventListener('click', closeHandler);
+        activeDropdownCleanup = () => document.removeEventListener('click', closeHandler);
 
         if (!isCreate) requestAnimationFrame(() => openDropdown());
       }

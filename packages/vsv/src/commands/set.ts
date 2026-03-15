@@ -57,7 +57,7 @@ export const setCommand = new Command('set')
           client.disconnect();
           process.exit(1);
         }
-        // addEnvironment not exposed on client yet — use setSecretValue which auto-creates env values
+        await client.addEnvironment(envId);
       }
       if (!data.secrets[serviceId]?.[field]) {
         if (!opts.create) {

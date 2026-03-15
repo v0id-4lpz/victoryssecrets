@@ -21,9 +21,8 @@ export function deleteService(data: VaultData, id: string): VaultData {
 }
 
 export function renameServiceLabel(data: VaultData, id: string, newLabel: string): VaultData {
-  if (data.services[id]) {
-    data.services[id]!.label = newLabel;
-  }
+  if (!data.services[id]) throw new Error(`Service "${id}" not found`);
+  data.services[id]!.label = newLabel;
   return data;
 }
 
@@ -41,8 +40,7 @@ export function renameServiceId(data: VaultData, oldId: string, newId: string): 
 }
 
 export function setServiceComment(data: VaultData, id: string, comment: string): VaultData {
-  if (data.services[id]) {
-    data.services[id]!.comment = comment;
-  }
+  if (!data.services[id]) throw new Error(`Service "${id}" not found`);
+  data.services[id]!.comment = comment;
   return data;
 }

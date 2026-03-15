@@ -6,7 +6,7 @@ import { initTheme, toggleTheme } from './ui/theme';
 import { renderButton } from './ui/components/button';
 import { icons } from './ui/components/icon';
 import { showToast } from './ui/components/toast';
-import { currentSection, setCurrentSection, esc, shortenPath, updateInfo, setUpdateInfo } from './ui/helpers';
+import { currentSection, setCurrentSection, esc, shortenPath, updateInfo, setUpdateInfo, isEditing, setEditing } from './ui/helpers';
 import { renderWelcome, bindWelcome } from './ui/welcome';
 import { renderServices, bindServices } from './ui/services';
 import { renderEnvironments, bindEnvironments } from './ui/environments';
@@ -81,51 +81,63 @@ function renderSearchResults(results: SearchResult[]): string {
   `).join('');
 }
 
-function bindSearch(): void {
+let searchKeyBound = false;
+let searchIndex: SearchResult[] = [];
+
+function openSearchModal(): void {
   const modal = document.getElementById('search-modal');
+  if (!modal) return;
+  searchIndex = buildSearchIndex();
+  modal.classList.remove('hidden');
+  const input = document.getElementById('search-input') as HTMLInputElement | null;
+  if (input) { input.value = ''; input.focus(); }
+  const res = document.getElementById('search-results');
+  if (res) res.innerHTML = '';
+}
+
+function closeSearchModal(): void {
+  document.getElementById('search-modal')?.classList.add('hidden');
+}
+
+function bindSearch(): void {
   const input = document.getElementById('search-input') as HTMLInputElement | null;
   const resultsEl = document.getElementById('search-results');
-  if (!modal || !input || !resultsEl) return;
+  if (!input || !resultsEl) return;
 
-  const index = buildSearchIndex();
-
-  const openSearch = () => {
-    modal.classList.remove('hidden');
-    input.value = '';
-    resultsEl.innerHTML = '';
-    input.focus();
-  };
-
-  const closeSearch = () => {
-    modal.classList.add('hidden');
-  };
-
-  document.addEventListener('keydown', (e) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-      e.preventDefault();
-      if (modal.classList.contains('hidden')) openSearch();
-      else closeSearch();
-    }
-  });
+  if (!searchKeyBound) {
+    document.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        const m = document.getElementById('search-modal');
+        if (!m) return;
+        if (m.classList.contains('hidden')) openSearchModal();
+        else closeSearchModal();
+      }
+    });
+    searchKeyBound = true;
+  }
 
   input.addEventListener('input', () => {
-    const results = filterSearch(input.value, index);
+    const results = filterSearch(input.value, searchIndex);
     resultsEl.innerHTML = renderSearchResults(results);
     resultsEl.querySelectorAll('[data-search-nav]').forEach(btn => {
       (btn as HTMLElement).onclick = () => {
         setCurrentSection((btn as HTMLElement).dataset.searchNav!);
-        closeSearch();
+        closeSearchModal();
         render();
       };
     });
   });
 
   input.onkeydown = (e) => {
-    if (e.key === 'Escape') closeSearch();
+    if (e.key === 'Escape') closeSearchModal();
   };
-  modal.onclick = (e) => {
-    if (e.target === modal) closeSearch();
-  };
+  const modal = document.getElementById('search-modal');
+  if (modal) {
+    modal.onclick = (e) => {
+      if (e.target === modal) closeSearchModal();
+    };
+  }
 }
 
 function renderMain(): string {
@@ -139,8 +151,8 @@ function renderMain(): string {
           ${updateInfo ? `<a id="update-link-header" href="#" class="shrink-0 no-drag inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition">${icons.arrowUp('w-3 h-3')} v${esc(updateInfo.version)}</a>` : ''}
         </div>
         <div class="no-drag flex items-center gap-3">
-          ${renderButton(icons.search(), { id: 'btn-search', variant: 'icon', title: 'Search (Ctrl+K)' })}
-          ${renderButton(icons.theme(), { id: 'btn-theme', variant: 'icon', title: 'Toggle theme' })}
+          ${renderButton(icons.search(), { id: 'btn-search', variant: 'icon', title: 'Search (Ctrl+K)', rawHtml: true })}
+          ${renderButton(icons.theme(), { id: 'btn-theme', variant: 'icon', title: 'Toggle theme', rawHtml: true })}
           ${renderButton('Lock', { id: 'btn-lock', cls: 'px-3 py-1.5 text-sm rounded-lg bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50' })}
         </div>
       </header>
@@ -175,7 +187,12 @@ function renderMain(): string {
 
 function bindMain(): void {
   document.querySelectorAll('[data-nav]').forEach(btn => {
-    (btn as HTMLElement).onclick = () => { setCurrentSection((btn as HTMLElement).dataset.nav!); render(); };
+    (btn as HTMLElement).onclick = () => {
+      if (isEditing() && !confirm('You have unsaved changes. Discard?')) return;
+      setEditing(false);
+      setCurrentSection((btn as HTMLElement).dataset.nav!);
+      render();
+    };
   });
 
   document.getElementById('btn-theme')!.onclick = toggleTheme;
@@ -197,13 +214,9 @@ function bindMain(): void {
   const updateLink = document.getElementById('update-link-header');
   if (updateLink) updateLink.onclick = (e) => { e.preventDefault(); window.electronAPI?.openExternal(updateInfo!.url); };
 
-  document.getElementById('btn-search')!.onclick = () => {
-    const modal = document.getElementById('search-modal')!;
-    modal.classList.remove('hidden');
-    document.getElementById('search-input')!.focus();
-  };
-
   bindSearch();
+
+  document.getElementById('btn-search')!.onclick = openSearchModal;
 
   switch (currentSection) {
     case 'services': bindServices(render); break;

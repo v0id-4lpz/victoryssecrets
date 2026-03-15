@@ -204,6 +204,10 @@ export class VsvClient {
     return this.call('deleteService', id) as Promise<VaultData>;
   }
 
+  async addEnvironment(envId: string, comment = ''): Promise<VaultData> {
+    return this.call('addEnvironment', envId, comment) as Promise<VaultData>;
+  }
+
   async setSecret(serviceId: string, field: string, opts?: { secret?: boolean; values?: Record<string, string> }): Promise<VaultData> {
     return this.call('setSecret', serviceId, field, opts) as Promise<VaultData>;
   }

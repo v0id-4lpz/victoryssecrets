@@ -93,11 +93,13 @@ export async function persist(): Promise<void> {
 }
 
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
-  if (!vaultData || !cryptoKey || !keySalt) throw new Error('Vault not open');
-  const testKey = await deriveKey(currentPassword, keySalt);
+  if (!vaultData || !cryptoKey || !keySalt || !vaultPath) throw new Error('Vault not open');
+  if (remoteMode) throw new Error('Cannot change password on a remote vault');
+  if (vaultData.settings.readOnly) throw new Error('Vault is read-only');
+  // Verify current password by decrypting the vault file from disk (1 Argon2id)
+  const buffer = readVaultFile(vaultPath);
   try {
-    const encrypted = await encrypt(vaultData, testKey, keySalt);
-    await decrypt(encrypted.buffer as ArrayBuffer, currentPassword);
+    await decrypt(buffer, currentPassword);
   } catch {
     throw new Error('Wrong password');
   }

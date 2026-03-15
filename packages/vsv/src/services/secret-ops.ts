@@ -20,13 +20,14 @@ export function setSecret(data: VaultData, serviceId: string, field: string, opt
 }
 
 export function setSecretValue(data: VaultData, serviceId: string, field: string, envId: string, value: string): VaultData {
-  if (!data.secrets[serviceId]?.[field]) return data;
+  if (!data.secrets[serviceId]?.[field]) throw new Error(`Secret "${serviceId}.${field}" not found`);
+  if (envId !== GLOBAL_ENV && !data.environments[envId]) throw new Error(`Environment "${envId}" not found`);
   data.secrets[serviceId]![field]!.values[envId] = value;
   return data;
 }
 
 export function setSecretFlag(data: VaultData, serviceId: string, field: string, secret: boolean): VaultData {
-  if (!data.secrets[serviceId]?.[field]) return data;
+  if (!data.secrets[serviceId]?.[field]) throw new Error(`Secret "${serviceId}.${field}" not found`);
   data.secrets[serviceId]![field]!.secret = secret;
   return data;
 }
@@ -64,6 +65,6 @@ export function moveSecret(data: VaultData, oldServiceId: string, oldField: stri
 export function resolveValue(entry: SecretEntry | null | undefined, envId: string): string | undefined {
   if (!entry?.values) return undefined;
   const envVal = entry.values[envId];
-  if (envVal !== undefined && envVal !== '') return envVal;
+  if (envVal !== undefined) return envVal;
   return entry.values[GLOBAL_ENV];
 }

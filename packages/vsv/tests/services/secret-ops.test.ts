@@ -9,7 +9,7 @@ import type { VaultData } from '../../src/types/vault';
 function makeVault(): VaultData {
   const data = createEmpty();
   data.services = { pg: { label: 'PostgreSQL', comment: '' }, redis: { label: 'Redis', comment: '' } };
-  data.environments = { prod: { comment: '' } };
+  data.environments = { prod: { comment: '' }, dev: { comment: '' } };
   data.secrets = {
     pg: {
       url: { secret: true, values: { _global: 'postgres://localhost', prod: 'postgres://prod' } },
@@ -70,10 +70,18 @@ describe('secret-ops', () => {
       setSecretValue(data, 'pg', 'url', 'dev', 'postgres://dev');
       expect(data.secrets.pg!.url!.values.dev).toBe('postgres://dev');
     });
-    it('does nothing for missing secret', () => {
+    it('throws for missing secret', () => {
       const data = makeVault();
-      setSecretValue(data, 'pg', 'nonexistent', 'dev', 'x');
-      expect(data.secrets.pg!.nonexistent).toBeUndefined();
+      expect(() => setSecretValue(data, 'pg', 'nonexistent', 'dev', 'x')).toThrow('not found');
+    });
+    it('throws for non-existent environment', () => {
+      const data = makeVault();
+      expect(() => setSecretValue(data, 'pg', 'url', 'staging', 'x')).toThrow('Environment "staging" not found');
+    });
+    it('allows setting value for _global env', () => {
+      const data = makeVault();
+      setSecretValue(data, 'pg', 'url', '_global', 'postgres://new');
+      expect(data.secrets.pg!.url!.values._global).toBe('postgres://new');
     });
   });
 
@@ -149,9 +157,9 @@ describe('secret-ops', () => {
       const entry = { secret: true, values: { _global: 'default' } };
       expect(resolveValue(entry, 'prod')).toBe('default');
     });
-    it('falls back to global when env value is empty string', () => {
+    it('returns empty string when env value is explicitly empty', () => {
       const entry = { secret: true, values: { _global: 'default', prod: '' } };
-      expect(resolveValue(entry, 'prod')).toBe('default');
+      expect(resolveValue(entry, 'prod')).toBe('');
     });
     it('returns undefined when no values', () => {
       expect(resolveValue(null, 'prod')).toBeUndefined();

@@ -73,10 +73,10 @@ describe('removeServiceRefs', () => {
     expect(result.main.REDIS).toBe('${redis.host}');
   });
 
-  it('keeps entries with composite values (not single ref)', () => {
+  it('removes entries with composite values referencing the deleted service', () => {
     const result = removeServiceRefs(templates, 'pg');
-    // '${pg.url}/mydb' is not a single ref (has /mydb suffix), so it's kept
-    expect(result.main.DB_URL).toBe('${pg.url}/mydb');
+    // '${pg.url}/mydb' contains a ref to pg, so it's removed
+    expect(result.main.DB_URL).toBeUndefined();
   });
 
   it('handles empty templates', () => {

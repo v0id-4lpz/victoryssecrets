@@ -28,10 +28,10 @@ export function refactorServiceId(templates: Templates, oldId: string, newId: st
 
 export function removeServiceRefs(templates: Templates, serviceId: string): Templates {
   const tpl = templates[TPL_KEY] || {};
+  const regex = new RegExp(`\\$\\{${escapeRegex(serviceId)}\\.`);
   const result: Record<string, string> = {};
   for (const [key, val] of Object.entries(tpl)) {
-    const m = typeof val === 'string' && val.match(/^\$\{(.+?)\.(.+)\}$/);
-    if (m && m[1] === serviceId) continue;
+    if (typeof val === 'string' && regex.test(val)) continue;
     result[key] = val;
   }
   return { [TPL_KEY]: result };

@@ -74,10 +74,9 @@ describe('service-ops', () => {
       renameServiceLabel(data, 'pg', 'Postgres DB');
       expect(data.services.pg!.label).toBe('Postgres DB');
     });
-    it('does nothing for missing service', () => {
+    it('throws for missing service', () => {
       const data = makeVault();
-      renameServiceLabel(data, 'mongo', 'MongoDB');
-      expect(data.services.mongo).toBeUndefined();
+      expect(() => renameServiceLabel(data, 'mongo', 'MongoDB')).toThrow('not found');
     });
   });
 

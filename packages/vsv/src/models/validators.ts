@@ -1,7 +1,9 @@
 // validators.ts — pure validation and sanitization functions
 
 export function sanitizeId(raw: string): string {
-  return raw.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+  const id = raw.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+  if (!id) throw new Error('Invalid identifier: no valid characters');
+  return id;
 }
 
 export function labelToId(label: string): string {

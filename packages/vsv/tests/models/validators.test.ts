@@ -18,8 +18,8 @@ describe('sanitizeId', () => {
     expect(sanitizeId('hello@world!')).toBe('helloworld');
   });
 
-  it('returns empty for invalid input', () => {
-    expect(sanitizeId('  @#$  ')).toBe('');
+  it('throws for invalid input with no valid characters', () => {
+    expect(() => sanitizeId('  @#$  ')).toThrow('no valid characters');
   });
 });
 

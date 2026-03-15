@@ -10,7 +10,7 @@ export function resolveSecrets(vault: VaultData, envId: string): Record<string, 
     for (const [field, entry] of Object.entries(fields)) {
       const envVal = entry.values?.[envId];
       const globalVal = entry.values?.[GLOBAL_ENV];
-      const value = (envVal !== undefined && envVal !== '') ? envVal : globalVal;
+      const value = envVal !== undefined ? envVal : globalVal;
       if (value !== undefined) resolved[serviceId]![field] = value;
     }
   }
@@ -22,7 +22,7 @@ function resolveWithSource(secrets: VaultData['secrets'], serviceId: string, fie
   if (!entry?.values) return { value: undefined, source: null, secret: false };
   const secret = entry.secret;
   const envVal = entry.values[envId];
-  if (envVal !== undefined && envVal !== '') return { value: envVal, source: envId, secret };
+  if (envVal !== undefined) return { value: envVal, source: envId, secret };
   const globalVal = entry.values[GLOBAL_ENV];
   if (globalVal !== undefined) return { value: globalVal, source: 'Global', secret };
   return { value: undefined, source: null, secret };

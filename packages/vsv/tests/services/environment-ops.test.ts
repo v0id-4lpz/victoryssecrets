@@ -68,10 +68,13 @@ describe('environment-ops', () => {
       renameEnvironment(data, 'prod', 'production');
       expect(data.environments.production!.comment).toBe('Production');
     });
-    it('no-ops if newId already exists', () => {
+    it('throws if newId already exists', () => {
       const data = makeVault();
-      renameEnvironment(data, 'prod', 'dev');
-      expect(data.environments.prod).toBeDefined();
+      expect(() => renameEnvironment(data, 'prod', 'dev')).toThrow('already exists');
+    });
+    it('throws if oldId does not exist', () => {
+      const data = makeVault();
+      expect(() => renameEnvironment(data, 'staging', 'newname')).toThrow('not found');
     });
   });
 
@@ -98,10 +101,9 @@ describe('environment-ops', () => {
     it('returns empty string for missing env', () => {
       expect(getEnvironmentComment(createEmpty(), 'nope')).toBe('');
     });
-    it('creates env entry if missing', () => {
+    it('throws if env does not exist', () => {
       const data = createEmpty();
-      setEnvironmentComment(data, 'test', 'Hello');
-      expect(data.environments.test!.comment).toBe('Hello');
+      expect(() => setEnvironmentComment(data, 'test', 'Hello')).toThrow('not found');
     });
   });
 });

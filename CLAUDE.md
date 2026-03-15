@@ -5,7 +5,7 @@
 
 La sécurité est une priorité absolue de l'app.
 
-- **Chiffrement** : AES-256-GCM + Argon2id (256MB, 3 itérations, parallélisme 4)
+- **Chiffrement** : AES-256-GCM + Argon2id (256MB, 8 itérations, parallélisme 4)
 - **Mot de passe jamais stocké** : seule la `CryptoKey` non-extractable (Web Crypto API) est conservée en mémoire — le password est oublié après dérivation
 - **Secrets jamais dans le DOM** : les valeurs sensibles sont stockées dans un `Map` JS, jamais dans des attributs `data-*`
 - **Clipboard auto-clear** : le presse-papier est nettoyé 10s après copie d'un secret + vidé au verrouillage

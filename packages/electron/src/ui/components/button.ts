@@ -31,13 +31,16 @@ export interface ButtonOptions {
   cls?: string;
   title?: string;
   type?: string;
+  /** If true, label is inserted as raw HTML (for icons/SVG). Otherwise it's escaped. */
+  rawHtml?: boolean;
 }
 
 export function renderButton(label: string, opts: ButtonOptions = {}): string {
-  const { variant = 'primary', id, attrs = '', cls = '', title, type } = opts;
+  const { variant = 'primary', id, attrs = '', cls = '', title, type, rawHtml = false } = opts;
   const classes = `${variants[variant] || variants.primary} ${cls}`.trim();
   const idAttr = id ? `id="${id}"` : '';
   const titleAttr = title ? `title="${esc(title)}"` : '';
   const typeAttr = type ? `type="${type}"` : '';
-  return `<button ${idAttr} ${typeAttr} class="${classes}" ${titleAttr} ${attrs}>${label}</button>`;
+  const content = rawHtml ? label : esc(label);
+  return `<button ${idAttr} ${typeAttr} class="${classes}" ${titleAttr} ${attrs}>${content}</button>`;
 }

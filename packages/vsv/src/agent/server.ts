@@ -106,7 +106,7 @@ async function handleRequest(req: AgentRequest): Promise<AgentResponse> {
     // Mutation methods
     if (MUTATIONS.has(method)) {
       if (vault.isRemote()) return { id, ok: false, error: 'Cannot mutate a remote vault (read-only)' };
-      const fn = (vault as Record<string, Function>)[method];
+      const fn = (vault as Record<string, (...args: unknown[]) => unknown>)[method];
       if (typeof fn !== 'function') return { id, ok: false, error: `Method not found: ${method}` };
       await fn.call(vault, ...args);
       return { id, ok: true, data: vault.getData() };

@@ -42,7 +42,7 @@ export function renderWelcome(): string {
           ${updateInfo ? `<a id="update-link-welcome" href="#" class="inline-flex items-center gap-1.5 mt-2 text-xs text-indigo-500 hover:text-indigo-400 transition">${icons.arrowUp('w-3.5 h-3.5')} v${esc(updateInfo.version)} available</a>` : ''}
         </div>
         <div class="mt-10 flex justify-center">
-          ${renderButton(icons.theme(), { id: 'btn-theme-welcome', variant: 'icon', title: 'Toggle theme' })}
+          ${renderButton(icons.theme(), { id: 'btn-theme-welcome', variant: 'icon', title: 'Toggle theme', rawHtml: true })}
         </div>
         <div id="welcome-actions" class="mt-10">
           ${renderButton('Create a new vault', { id: 'btn-create', variant: 'primary', cls: 'w-full flex justify-center py-3 !text-sm font-medium' })}

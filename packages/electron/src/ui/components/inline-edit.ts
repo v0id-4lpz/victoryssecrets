@@ -1,6 +1,6 @@
 // inline-edit.ts — inline form for create/edit with row-based layout
 
-import { esc, INPUT_CLS } from '../helpers';
+import { esc, INPUT_CLS, setEditing } from '../helpers';
 import { renderButton } from './button';
 
 interface InlineEditField {
@@ -60,17 +60,19 @@ export function startInlineEdit(container: HTMLElement, { rows, onSave, onCancel
     return values;
   };
 
-  const save = async () => { await onSave(getValues()); };
+  setEditing(true);
+  const save = async () => { setEditing(false); await onSave(getValues()); };
+  const cancelEdit = () => { setEditing(false); onCancel(); };
 
   (container.querySelector('[data-inline-save]') as HTMLElement).onclick = (e) => { e.stopPropagation(); save(); };
-  (container.querySelector('[data-inline-cancel]') as HTMLElement).onclick = (e) => { e.stopPropagation(); onCancel(); };
+  (container.querySelector('[data-inline-cancel]') as HTMLElement).onclick = (e) => { e.stopPropagation(); cancelEdit(); };
   container.querySelectorAll('input[name]').forEach(el => {
     const input = el as HTMLInputElement;
     input.onclick = (e) => e.stopPropagation();
     if (!input.readOnly) {
       input.onkeydown = (e) => {
         if (e.key === 'Enter') save();
-        if (e.key === 'Escape') onCancel();
+        if (e.key === 'Escape') cancelEdit();
       };
       if (onInput) {
         input.addEventListener('input', () => onInput(input.name, input.value, getValues));

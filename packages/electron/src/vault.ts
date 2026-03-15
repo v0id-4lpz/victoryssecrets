@@ -70,7 +70,7 @@ async function call(method: string, ...args: unknown[]): Promise<void> {
     const data = await window.electronAPI!.vaultCall(method, args);
     cachedData = ensureStructure(data);
   } catch (e: any) {
-    onReadOnlyBlocked?.(e.message);
+    onMutationError?.(e.message);
     throw e;
   }
 }
