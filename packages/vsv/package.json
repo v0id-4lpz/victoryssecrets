@@ -1,6 +1,6 @@
 {
   "name": "vsv",
-  "version": "0.1.0",
+  "version": "3.0.0",
   "description": "Victory's Secrets CLI — secrets manager",
   "type": "module",
   "main": "dist/index.js",
