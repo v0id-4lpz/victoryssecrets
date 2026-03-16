@@ -33,13 +33,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
       - id: check
         run: |
           CURRENT=$(node -p "require('./packages/electron/package.json').version")
-          PREVIOUS=$(git show HEAD~1:packages/electron/package.json | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).version")
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "none")
           echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
-          if [ "$CURRENT" != "$PREVIOUS" ]; then
+          if [ "$LATEST_TAG" = "none" ] || [ "$LATEST_TAG" != "v$CURRENT" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
