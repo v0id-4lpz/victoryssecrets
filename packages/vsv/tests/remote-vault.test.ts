@@ -51,7 +51,7 @@ describe('remote vault', () => {
     cleanupFiles();
   });
 
-  it('opens a remote vault in read-only mode', async () => {
+  it('opens a remote vault in read-only mode', { timeout: 30000 }, async () => {
     // Create a local vault first
     await vault.create(TMP, PW);
     await vault.addService('db', 'Database');

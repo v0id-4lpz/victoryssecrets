@@ -1,19 +1,21 @@
 // client.ts — vsv agent client SDK
 
 import { connect, type Socket } from 'node:net';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import type { VaultData, VaultSettings, SecretEntry, GenerateResult } from '../types/vault';
 import type { AgentRequest, AgentResponse, AgentInfo } from './protocol';
-import { getSocketPath } from './protocol';
+import { getSocketPath, getTokenPath } from './protocol';
 
 const DEFAULT_CONNECT_TIMEOUT = 5_000;
 const DEFAULT_REQUEST_TIMEOUT = 30_000;
+const MAX_BUFFER_SIZE = 10_000_000; // 10 MB — prevent memory exhaustion from rogue server
 
 export interface ClientOptions {
   socketPath?: string;
   env?: string;
   connectTimeout?: number;
   requestTimeout?: number;
+  token?: string;
 }
 
 export class VsvClient {
@@ -25,12 +27,24 @@ export class VsvClient {
   private defaultEnv: string | undefined;
   private connectTimeout: number;
   private requestTimeout: number;
+  private token: string | undefined;
 
   constructor(opts?: ClientOptions) {
     this.socketPath = opts?.socketPath ?? getSocketPath();
     this.defaultEnv = opts?.env;
     this.connectTimeout = opts?.connectTimeout ?? DEFAULT_CONNECT_TIMEOUT;
     this.requestTimeout = opts?.requestTimeout ?? DEFAULT_REQUEST_TIMEOUT;
+    this.token = opts?.token;
+  }
+
+  private readToken(): string {
+    // Explicit token from constructor takes priority
+    if (this.token) return this.token;
+    const tokenPath = getTokenPath();
+    if (!existsSync(tokenPath)) {
+      throw new Error('Agent token file not found. Is the agent running?');
+    }
+    return readFileSync(tokenPath, 'utf-8').trim();
   }
 
   async connect(): Promise<void> {
@@ -38,6 +52,9 @@ export class VsvClient {
     if (!existsSync(this.socketPath)) {
       throw new Error('Agent not running. Start it with "vsv agent start -f <vault>"');
     }
+
+    // Read token before connecting
+    const token = this.readToken();
 
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -48,11 +65,24 @@ export class VsvClient {
       const sock = connect(this.socketPath, () => {
         clearTimeout(timer);
         this.socket = sock;
-        resolve();
+
+        // Send auth handshake
+        this.call('auth', token)
+          .then(() => resolve())
+          .catch((err) => {
+            sock.destroy();
+            this.socket = null;
+            reject(new Error(`Agent authentication failed: ${(err as Error).message}`));
+          });
       });
 
       sock.on('data', (chunk) => {
         this.buffer += chunk.toString();
+        if (this.buffer.length > MAX_BUFFER_SIZE) {
+          this.buffer = '';
+          sock.destroy(new Error('Server response too large'));
+          return;
+        }
         let idx: number;
         while ((idx = this.buffer.indexOf('\n')) !== -1) {
           const line = this.buffer.slice(0, idx);

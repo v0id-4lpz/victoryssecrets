@@ -8,9 +8,8 @@ export function refactorTemplateRefs(templates: Templates, pattern: string, repl
   const tpl = templates[TPL_KEY] || {};
   const result: Record<string, string> = {};
   for (const [key, val] of Object.entries(tpl)) {
-    result[key] = typeof val === 'string' && val.includes(pattern)
-      ? val.replace(pattern, replacement)
-      : val;
+    if (typeof val !== 'string') continue;
+    result[key] = val.replaceAll(pattern, replacement);
   }
   return { [TPL_KEY]: result };
 }
@@ -21,7 +20,8 @@ export function refactorServiceId(templates: Templates, oldId: string, newId: st
   const replacement = `\${${newId}.`;
   const result: Record<string, string> = {};
   for (const [key, val] of Object.entries(tpl)) {
-    result[key] = typeof val === 'string' ? val.replace(regex, replacement) : val;
+    if (typeof val !== 'string') continue;
+    result[key] = val.replace(regex, replacement);
   }
   return { [TPL_KEY]: result };
 }
@@ -31,7 +31,8 @@ export function removeServiceRefs(templates: Templates, serviceId: string): Temp
   const regex = new RegExp(`\\$\\{${escapeRegex(serviceId)}\\.`);
   const result: Record<string, string> = {};
   for (const [key, val] of Object.entries(tpl)) {
-    if (typeof val === 'string' && regex.test(val)) continue;
+    if (typeof val !== 'string') continue;
+    if (regex.test(val)) continue;
     result[key] = val;
   }
   return { [TPL_KEY]: result };

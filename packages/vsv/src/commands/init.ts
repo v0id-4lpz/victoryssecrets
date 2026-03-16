@@ -4,8 +4,7 @@ import { existsSync } from 'node:fs';
 import { Command } from 'commander';
 import { promptPassword } from '../cli-utils';
 import * as vault from '../vault';
-
-const MIN_PASSWORD_LENGTH = 12;
+import { MIN_PASSWORD_LENGTH } from '../vault';
 
 export const initCommand = new Command('init')
   .description('Create a new vault')

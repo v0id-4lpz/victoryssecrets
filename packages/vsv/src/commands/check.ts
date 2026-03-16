@@ -21,6 +21,8 @@ function checkEnv(data: VaultData, envId: string): { missing: string[]; empty: s
         missing.push(ref);
       } else if (envVal === '' && globalVal === undefined) {
         empty.push(ref);
+      } else if (envVal === undefined && globalVal === '') {
+        empty.push(ref);
       }
     }
   }
@@ -36,6 +38,7 @@ export const checkCommand = new Command('check')
   .action(async (opts: { env?: string; file?: string; json?: boolean }) => {
     let data: VaultData;
     let envId: string;
+    let openedLocally = false;
 
     // Agent mode
     if (isAgentRunning()) {
@@ -63,35 +66,38 @@ export const checkCommand = new Command('check')
       const filePath = resolveFile(opts);
       const password = await promptPassword();
       await vault.open(filePath, password);
+      openedLocally = true;
       data = vault.getData();
     }
 
-    if (!data.environments[envId]) {
-      process.stderr.write(`Error: environment "${envId}" not found\n`);
-      if (!isAgentRunning()) vault.lock();
-      process.exit(1);
-    }
+    try {
+      if (!Object.hasOwn(data.environments, envId)) {
+        process.stderr.write(`Error: environment "${envId}" not found\n`);
+        process.exit(1);
+      }
 
-    const { missing, empty } = checkEnv(data, envId);
-    const ok = missing.length === 0 && empty.length === 0;
+      const { missing, empty } = checkEnv(data, envId);
+      const ok = missing.length === 0 && empty.length === 0;
 
-    if (opts.json) {
-      process.stdout.write(JSON.stringify({ env: envId, ok, missing, empty }, null, 2) + '\n');
-    } else {
-      if (ok) {
-        process.stderr.write(`All secrets have values for env "${envId}"\n`);
+      if (opts.json) {
+        process.stdout.write(JSON.stringify({ env: envId, ok, missing, empty }, null, 2) + '\n');
       } else {
-        if (missing.length > 0) {
-          process.stderr.write(`Missing values for env "${envId}":\n`);
-          for (const ref of missing) process.stderr.write(`  ${ref}\n`);
-        }
-        if (empty.length > 0) {
-          warn(`Empty values for env "${envId}":\n`);
-          for (const ref of empty) warn(`  ${ref}\n`);
+        if (ok) {
+          process.stderr.write(`All secrets have values for env "${envId}"\n`);
+        } else {
+          if (missing.length > 0) {
+            process.stderr.write(`Missing values for env "${envId}":\n`);
+            for (const ref of missing) process.stderr.write(`  ${ref}\n`);
+          }
+          if (empty.length > 0) {
+            warn(`Empty values for env "${envId}":\n`);
+            for (const ref of empty) warn(`  ${ref}\n`);
+          }
         }
       }
-    }
 
-    if (!isAgentRunning()) vault.lock();
-    process.exit(ok ? 0 : 1);
+      process.exit(ok ? 0 : 1);
+    } finally {
+      if (openedLocally) vault.lock();
+    }
   });

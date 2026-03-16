@@ -28,8 +28,11 @@ export const envCommand = new Command('env')
       const filePath = resolveFile(opts);
       const password = await promptPassword();
       await vault.open(filePath, password);
-      result = generateEnv(vault.getData(), opts.env);
-      vault.lock();
+      try {
+        result = generateEnv(vault.getData(), opts.env);
+      } finally {
+        vault.lock();
+      }
     }
 
     for (const w of result.warnings) {

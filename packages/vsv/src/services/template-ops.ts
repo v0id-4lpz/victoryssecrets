@@ -51,7 +51,7 @@ export function replaceTemplate(data: VaultData, newTpl: Record<string, string>)
 export function mergeTemplate(data: VaultData, incoming: Record<string, string>): VaultData {
   if (!data.templates[TPL_KEY]) data.templates[TPL_KEY] = {};
   for (const [key, val] of Object.entries(incoming)) {
-    if (!(key in data.templates[TPL_KEY])) {
+    if (!Object.hasOwn(data.templates[TPL_KEY], key)) {
       data.templates[TPL_KEY][key] = val;
     }
   }

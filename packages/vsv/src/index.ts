@@ -28,3 +28,4 @@ export { createEmpty, ensureStructure, CURRENT_VERSION, GLOBAL_ENV } from './mod
 export { sanitizeId, labelToId } from './models/validators';
 
 export { VsvClient, createClient } from './agent/client';
+export { readSecretsFromFd } from './agent/secret-fd';

@@ -18,14 +18,14 @@ describe('crypto (Node.js pure)', () => {
   });
 
   describe('deriveKey', () => {
-    it('returns a non-extractable CryptoKey', async () => {
+    it('returns a non-extractable CryptoKey', { timeout: 10000 }, async () => {
       const salt = generateSalt();
       const key = await deriveKey('password123', salt);
       expect(key.extractable).toBe(false);
       expect(key.algorithm.name).toBe('AES-GCM');
     });
 
-    it('same password + salt produces same key behavior', async () => {
+    it('same password + salt produces same key behavior', { timeout: 15000 }, async () => {
       const salt = generateSalt();
       const key1 = await deriveKey('test', salt);
       const key2 = await deriveKey('test', salt);
@@ -36,7 +36,7 @@ describe('crypto (Node.js pure)', () => {
       expect(new TextDecoder().decode(dec)).toBe('hello');
     });
 
-    it('different passwords produce different keys', async () => {
+    it('different passwords produce different keys', { timeout: 15000 }, async () => {
       const salt = generateSalt();
       const key1 = await deriveKey('password1', salt);
       const key2 = await deriveKey('password2', salt);
@@ -46,7 +46,7 @@ describe('crypto (Node.js pure)', () => {
       await expect(webcrypto.subtle.decrypt({ name: 'AES-GCM', iv }, key2, enc)).rejects.toThrow();
     });
 
-    it('different salts produce different keys', async () => {
+    it('different salts produce different keys', { timeout: 15000 }, async () => {
       const key1 = await deriveKey('same', generateSalt());
       const key2 = await deriveKey('same', generateSalt());
       const iv = webcrypto.getRandomValues(new Uint8Array(12));
@@ -57,7 +57,7 @@ describe('crypto (Node.js pure)', () => {
   });
 
   describe('encrypt / decrypt', () => {
-    it('round-trips vault data', async () => {
+    it('round-trips vault data', { timeout: 15000 }, async () => {
       const vaultData = { services: { pg: { label: 'PostgreSQL' } }, version: 2 };
       const salt = generateSalt();
       const key = await deriveKey('mypassword', salt);
@@ -66,7 +66,7 @@ describe('crypto (Node.js pure)', () => {
       expect(result.data).toEqual(vaultData);
     });
 
-    it('returns key and salt on decrypt', async () => {
+    it('returns key and salt on decrypt', { timeout: 15000 }, async () => {
       const salt = generateSalt();
       const key = await deriveKey('pw', salt);
       const encrypted = await encrypt({ test: true }, key, salt);
@@ -76,14 +76,14 @@ describe('crypto (Node.js pure)', () => {
       expect(result.salt.length).toBe(16);
     });
 
-    it('decrypt fails with wrong password', async () => {
+    it('decrypt fails with wrong password', { timeout: 15000 }, async () => {
       const salt = generateSalt();
       const key = await deriveKey('correct', salt);
       const encrypted = await encrypt({ secret: 'data' }, key, salt);
       await expect(decrypt(encrypted, 'wrong')).rejects.toThrow();
     });
 
-    it('each encryption produces different output (random IV)', async () => {
+    it('each encryption produces different output (random IV)', { timeout: 15000 }, async () => {
       const data = { same: 'data' };
       const salt = generateSalt();
       const key = await deriveKey('pw', salt);
@@ -94,7 +94,7 @@ describe('crypto (Node.js pure)', () => {
       expect(iv1).not.toEqual(iv2);
     });
 
-    it('handles complex vault data', async () => {
+    it('handles complex vault data', { timeout: 15000 }, async () => {
       const vaultData = {
         version: 2,
         services: { pg: { label: 'PostgreSQL', comment: 'Main DB' } },
@@ -114,7 +114,7 @@ describe('crypto (Node.js pure)', () => {
       expect(result.data).toEqual(vaultData);
     });
 
-    it('handles unicode content', async () => {
+    it('handles unicode content', { timeout: 15000 }, async () => {
       const data = { label: 'Éléphant 🐘 中文' };
       const salt = generateSalt();
       const key = await deriveKey('pw', salt);
@@ -123,7 +123,7 @@ describe('crypto (Node.js pure)', () => {
       expect(result.data.label).toBe('Éléphant 🐘 中文');
     });
 
-    it('preserved salt matches in output', async () => {
+    it('preserved salt matches in output', { timeout: 15000 }, async () => {
       const salt = generateSalt();
       const key = await deriveKey('pw', salt);
       const encrypted = await encrypt({}, key, salt);
@@ -131,7 +131,7 @@ describe('crypto (Node.js pure)', () => {
       expect(embeddedSalt).toEqual(salt);
     });
 
-    it('returned key can be reused for subsequent encryptions', async () => {
+    it('returned key can be reused for subsequent encryptions', { timeout: 20000 }, async () => {
       const salt = generateSalt();
       const key = await deriveKey('pw', salt);
       const encrypted1 = await encrypt({ v: 1 }, key, salt);

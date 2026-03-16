@@ -23,12 +23,20 @@ function getRunDir(): string {
   return process.env['XDG_RUNTIME_DIR'] ?? '/tmp';
 }
 
+function getUserId(): number | string {
+  // On POSIX systems, use real uid. On Windows, fall back to username to avoid shared paths.
+  if (process.getuid) return process.getuid();
+  return process.env['USERNAME'] || process.env['USER'] || process.pid;
+}
+
 export function getSocketPath(): string {
-  const uid = process.getuid?.() ?? 0;
-  return `${getRunDir()}/vsv-agent-${uid}.sock`;
+  return `${getRunDir()}/vsv-agent-${getUserId()}.sock`;
 }
 
 export function getPidPath(): string {
-  const uid = process.getuid?.() ?? 0;
-  return `${getRunDir()}/vsv-agent-${uid}.pid`;
+  return `${getRunDir()}/vsv-agent-${getUserId()}.pid`;
+}
+
+export function getTokenPath(): string {
+  return `${getRunDir()}/vsv-agent-${getUserId()}.token`;
 }

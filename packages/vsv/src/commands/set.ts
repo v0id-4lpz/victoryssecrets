@@ -86,46 +86,54 @@ export const setCommand = new Command('set')
     const password = await promptPassword();
     await vault.open(filePath, password);
 
-    const data = vault.getData();
+    try {
+      const data = vault.getData();
 
-    if (!data.services[serviceId]) {
-      if (!opts.create) {
-        process.stderr.write(`Error: service "${serviceId}" not found (use --create to auto-create)\n`);
-        vault.lock();
-        process.exit(1);
+      if (!data.services[serviceId]) {
+        if (!opts.create) {
+          process.stderr.write(`Error: service "${serviceId}" not found (use --create to auto-create)\n`);
+          process.exit(1);
+        }
+        await vault.addService(serviceId, serviceId);
       }
-      await vault.addService(serviceId, serviceId);
-    }
 
-    if (!data.environments[opts.env]) {
-      if (!opts.create) {
-        process.stderr.write(`Error: environment "${opts.env}" not found (use --create to auto-create)\n`);
-        vault.lock();
-        process.exit(1);
+      if (!data.environments[opts.env]) {
+        if (!opts.create) {
+          process.stderr.write(`Error: environment "${opts.env}" not found (use --create to auto-create)\n`);
+          process.exit(1);
+        }
+        await vault.addEnvironment(opts.env);
       }
-      await vault.addEnvironment(opts.env);
-    }
 
-    if (!data.secrets[serviceId]?.[field]) {
-      if (!opts.create) {
-        process.stderr.write(`Error: secret "${ref}" not found (use --create to auto-create)\n`);
-        vault.lock();
-        process.exit(1);
+      if (!data.secrets[serviceId]?.[field]) {
+        if (!opts.create) {
+          process.stderr.write(`Error: secret "${ref}" not found (use --create to auto-create)\n`);
+          process.exit(1);
+        }
+        await vault.setSecret(serviceId, field);
       }
-      await vault.setSecret(serviceId, field);
-    }
 
-    await vault.setSecretValue(serviceId, field, opts.env, value);
-    process.stderr.write(`Set ${ref} for env "${opts.env}"\n`);
-    vault.lock();
+      await vault.setSecretValue(serviceId, field, opts.env, value);
+      process.stderr.write(`Set ${ref} for env "${opts.env}"\n`);
+    } finally {
+      vault.lock();
+    }
   });
 
 function readStdin(): Promise<string> {
   return new Promise((resolve, reject) => {
     let data = '';
     process.stdin.setEncoding('utf-8');
-    process.stdin.on('data', (chunk) => { data += chunk; });
-    process.stdin.on('end', () => resolve(data.trimEnd()));
-    process.stdin.on('error', reject);
+    const onData = (chunk: string) => { data += chunk; };
+    const onEnd = () => { cleanup(); resolve(data.trimEnd()); };
+    const onError = (err: Error) => { cleanup(); reject(err); };
+    function cleanup() {
+      process.stdin.removeListener('data', onData);
+      process.stdin.removeListener('end', onEnd);
+      process.stdin.removeListener('error', onError);
+    }
+    process.stdin.on('data', onData);
+    process.stdin.on('end', onEnd);
+    process.stdin.on('error', onError);
   });
 }

@@ -9,31 +9,34 @@ export function getAllSecrets(data: VaultData): Record<string, Record<string, Se
 }
 
 export function getSecret(data: VaultData, serviceId: string, field: string): SecretEntry | null {
-  return data.secrets?.[serviceId]?.[field] || null;
+  if (!Object.hasOwn(data.secrets, serviceId)) return null;
+  const fields = data.secrets[serviceId];
+  if (!fields || !Object.hasOwn(fields, field)) return null;
+  return fields[field] || null;
 }
 
 export function setSecret(data: VaultData, serviceId: string, field: string, opts?: { secret?: boolean; values?: Record<string, string> } | null): VaultData {
   const { secret = true, values = {} } = opts ?? {};
-  if (!data.secrets[serviceId]) data.secrets[serviceId] = {};
+  if (!Object.hasOwn(data.secrets, serviceId)) data.secrets[serviceId] = {};
   data.secrets[serviceId]![field] = { secret, values };
   return data;
 }
 
 export function setSecretValue(data: VaultData, serviceId: string, field: string, envId: string, value: string): VaultData {
-  if (!data.secrets[serviceId]?.[field]) throw new Error(`Secret "${serviceId}.${field}" not found`);
-  if (envId !== GLOBAL_ENV && !data.environments[envId]) throw new Error(`Environment "${envId}" not found`);
+  if (!Object.hasOwn(data.secrets, serviceId) || !data.secrets[serviceId]?.[field]) throw new Error(`Secret "${serviceId}.${field}" not found`);
+  if (envId !== GLOBAL_ENV && !Object.hasOwn(data.environments, envId)) throw new Error(`Environment "${envId}" not found`);
   data.secrets[serviceId]![field]!.values[envId] = value;
   return data;
 }
 
 export function setSecretFlag(data: VaultData, serviceId: string, field: string, secret: boolean): VaultData {
-  if (!data.secrets[serviceId]?.[field]) throw new Error(`Secret "${serviceId}.${field}" not found`);
+  if (!Object.hasOwn(data.secrets, serviceId) || !data.secrets[serviceId]?.[field]) throw new Error(`Secret "${serviceId}.${field}" not found`);
   data.secrets[serviceId]![field]!.secret = secret;
   return data;
 }
 
 export function deleteSecret(data: VaultData, serviceId: string, field: string): VaultData {
-  if (data.secrets[serviceId]) {
+  if (Object.hasOwn(data.secrets, serviceId)) {
     delete data.secrets[serviceId]![field];
     if (Object.keys(data.secrets[serviceId]!).length === 0) delete data.secrets[serviceId];
   }
@@ -41,18 +44,18 @@ export function deleteSecret(data: VaultData, serviceId: string, field: string):
 }
 
 export function deleteSecretValue(data: VaultData, serviceId: string, field: string, envId: string): VaultData {
-  if (data.secrets[serviceId]?.[field]?.values) {
+  if (Object.hasOwn(data.secrets, serviceId) && data.secrets[serviceId]?.[field]?.values) {
     delete data.secrets[serviceId]![field]!.values[envId];
   }
   return data;
 }
 
 export function moveSecret(data: VaultData, oldServiceId: string, oldField: string, newServiceId: string, newField: string): VaultData {
-  if (!data.secrets[oldServiceId]?.[oldField]) return data;
+  if (!Object.hasOwn(data.secrets, oldServiceId) || !data.secrets[oldServiceId]?.[oldField]) return data;
   const entry = data.secrets[oldServiceId]![oldField]!;
   delete data.secrets[oldServiceId]![oldField];
   if (Object.keys(data.secrets[oldServiceId]!).length === 0) delete data.secrets[oldServiceId];
-  if (!data.secrets[newServiceId]) data.secrets[newServiceId] = {};
+  if (!Object.hasOwn(data.secrets, newServiceId)) data.secrets[newServiceId] = {};
   data.secrets[newServiceId]![newField] = entry;
   data.templates = refactorTemplateRefs(
     data.templates,

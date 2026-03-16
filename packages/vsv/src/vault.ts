@@ -1,15 +1,20 @@
 // vault.ts — stateful orchestrator (Node.js pure)
 
-import { webcrypto } from 'node:crypto';
+import { webcrypto, timingSafeEqual } from 'node:crypto';
 import type { VaultData, VaultSettings, SecretEntry } from './types/vault';
-import { encrypt, decrypt, deriveKey, generateSalt } from './crypto';
+import { encrypt, decrypt, deriveKey, generateSalt, SALT_LENGTH, IV_LENGTH } from './crypto';
 import { readVaultFile, writeVaultFile, fetchVaultFile, isRemoteUrl } from './storage';
 import { createEmpty, ensureStructure } from './models/vault-schema';
+import { isUnsafeName, isReservedEnvName } from './models/validators';
 import * as serviceOps from './services/service-ops';
 import * as environmentOps from './services/environment-ops';
 import * as secretOps from './services/secret-ops';
 import * as templateOps from './services/template-ops';
 import * as settingsOps from './services/settings-ops';
+
+function assertSafeName(name: string, label: string): void {
+  if (isUnsafeName(name)) throw new Error(`Unsafe ${label}: "${name}" is a reserved name`);
+}
 
 type CKey = webcrypto.CryptoKey;
 
@@ -18,6 +23,7 @@ let cryptoKey: CKey | null = null;
 let keySalt: Uint8Array | null = null;
 let vaultPath: string | null = null;
 let remoteMode = false;
+let persistQueue: Promise<void> = Promise.resolve();
 
 // --- State ---
 
@@ -42,7 +48,12 @@ export function isReadOnly(): boolean {
   return remoteMode || (vaultData?.settings.readOnly === true);
 }
 
+export const MIN_PASSWORD_LENGTH = 12;
+
 export async function create(filePath: string, password: string): Promise<VaultData> {
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    throw new Error(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);
+  }
   const salt = generateSalt();
   cryptoKey = await deriveKey(password, salt);
   keySalt = salt;
@@ -69,33 +80,59 @@ export async function refresh(): Promise<VaultData> {
   if (!remoteMode) throw new Error('Refresh is only supported for remote vaults');
   const buffer = await fetchVaultFile(vaultPath);
   const raw = new Uint8Array(buffer);
-  const salt = raw.slice(0, 16);
+  const salt = raw.slice(0, SALT_LENGTH);
   // If salt changed, the password was changed — we can't decrypt with our key
-  if (salt.length !== keySalt.length || !salt.every((b, i) => b === keySalt![i])) {
+  if (salt.length !== keySalt.length || !timingSafeEqual(Buffer.from(salt), Buffer.from(keySalt))) {
     throw new Error('Remote vault password has changed — restart agent with new password');
   }
-  const iv = raw.slice(16, 28);
-  const ciphertext = raw.slice(28);
+  const iv = raw.slice(SALT_LENGTH, SALT_LENGTH + IV_LENGTH);
+  const ciphertext = raw.slice(SALT_LENGTH + IV_LENGTH);
   const decrypted = await webcrypto.subtle.decrypt({ name: 'AES-GCM', iv }, cryptoKey, ciphertext);
-  const json = new TextDecoder().decode(decrypted);
+  const decryptedBytes = new Uint8Array(decrypted);
+  const json = new TextDecoder().decode(decryptedBytes);
   let data;
-  try { data = JSON.parse(json); } catch { throw new Error('Vault data is corrupted (invalid JSON)'); }
+  try { data = JSON.parse(json); } catch { throw new Error('Vault data is corrupted (invalid JSON)'); } finally { decryptedBytes.fill(0); }
   vaultData = ensureStructure(data);
   return vaultData;
 }
 
-export async function persist(): Promise<void> {
-  if (!vaultData || !cryptoKey || !vaultPath) throw new Error('Vault not open');
-  if (remoteMode) throw new Error('Cannot write to a remote vault (read-only)');
-  if (vaultData.settings.readOnly) throw new Error('Vault is read-only');
-  const encrypted = await encrypt(vaultData, cryptoKey, keySalt!);
-  writeVaultFile(vaultPath, encrypted);
+async function _persist(bypassReadOnly = false): Promise<void> {
+  // Serialize writes to prevent concurrent file corruption
+  const prev = persistQueue;
+  let resolve!: () => void;
+  let reject!: (err: Error) => void;
+  const p = new Promise<void>((res, rej) => { resolve = res; reject = rej; });
+  // Prevent unhandled rejection warnings — errors are already propagated via throw
+  p.catch(() => {});
+  persistQueue = p;
+
+  try {
+    // Wait for previous write — catch its error so we still attempt ours
+    // (a failed write should not block subsequent writes from persisting current state)
+    await prev.catch(() => {});
+    if (!vaultData || !cryptoKey || !vaultPath) throw new Error('Vault not open');
+    if (remoteMode) throw new Error('Cannot write to a remote vault (read-only)');
+    if (!bypassReadOnly && vaultData.settings.readOnly) throw new Error('Vault is read-only');
+    const encrypted = await encrypt(vaultData, cryptoKey, keySalt!);
+    writeVaultFile(vaultPath, encrypted);
+    resolve();
+  } catch (e) {
+    reject(e as Error); // signal failure to any write waiting on us
+    throw e;
+  }
+}
+
+export function persist(): Promise<void> {
+  return _persist(false);
 }
 
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
   if (!vaultData || !cryptoKey || !keySalt || !vaultPath) throw new Error('Vault not open');
   if (remoteMode) throw new Error('Cannot change password on a remote vault');
   if (vaultData.settings.readOnly) throw new Error('Vault is read-only');
+  if (newPassword.length < MIN_PASSWORD_LENGTH) {
+    throw new Error(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);
+  }
   // Verify current password by decrypting the vault file from disk (1 Argon2id)
   const buffer = readVaultFile(vaultPath);
   try {
@@ -110,11 +147,13 @@ export async function changePassword(currentPassword: string, newPassword: strin
 }
 
 export function lock(): void {
+  if (keySalt) keySalt.fill(0);
   vaultData = null;
   cryptoKey = null;
   keySalt = null;
   vaultPath = null;
   remoteMode = false;
+  persistQueue = Promise.resolve();
 }
 
 // --- Services ---
@@ -124,6 +163,7 @@ export function hasService(id: string): boolean {
 }
 
 export async function addService(id: string, label: string, comment = ''): Promise<void> {
+  assertSafeName(id, 'service id');
   serviceOps.addService(getData(), id, label, comment);
   await persist();
 }
@@ -139,6 +179,7 @@ export async function renameService(id: string, newLabel: string): Promise<void>
 }
 
 export async function renameServiceId(oldId: string, newId: string): Promise<void> {
+  assertSafeName(newId, 'service id');
   serviceOps.renameServiceId(getData(), oldId, newId);
   await persist();
 }
@@ -155,11 +196,15 @@ export function hasEnvironment(envId: string): boolean {
 }
 
 export async function addEnvironment(envId: string, comment = ''): Promise<void> {
+  assertSafeName(envId, 'environment id');
+  if (isReservedEnvName(envId)) throw new Error(`"${envId}" is a reserved internal name`);
   environmentOps.addEnvironment(getData(), envId, comment);
   await persist();
 }
 
 export async function renameEnvironment(oldId: string, newId: string): Promise<void> {
+  assertSafeName(newId, 'environment id');
+  if (isReservedEnvName(newId)) throw new Error(`"${newId}" is a reserved internal name`);
   environmentOps.renameEnvironment(getData(), oldId, newId);
   await persist();
 }
@@ -196,11 +241,19 @@ export function get(ref: string, envId: string): string | null {
 }
 
 export async function setSecret(serviceId: string, field: string, opts?: { secret?: boolean; values?: Record<string, string> }): Promise<void> {
+  assertSafeName(serviceId, 'service id');
+  assertSafeName(field, 'field name');
+  if (opts?.values) {
+    for (const envId of Object.keys(opts.values)) {
+      assertSafeName(envId, 'environment id');
+    }
+  }
   secretOps.setSecret(getData(), serviceId, field, opts);
   await persist();
 }
 
 export async function setSecretValue(serviceId: string, field: string, envId: string, value: string): Promise<void> {
+  assertSafeName(envId, 'environment id');
   secretOps.setSecretValue(getData(), serviceId, field, envId, value);
   await persist();
 }
@@ -221,6 +274,8 @@ export async function deleteSecretValue(serviceId: string, field: string, envId:
 }
 
 export async function moveSecret(oldServiceId: string, oldField: string, newServiceId: string, newField: string): Promise<void> {
+  assertSafeName(newServiceId, 'service id');
+  assertSafeName(newField, 'field name');
   secretOps.moveSecret(getData(), oldServiceId, oldField, newServiceId, newField);
   await persist();
 }
@@ -271,9 +326,16 @@ export async function setReadOnly(readOnly: boolean): Promise<void> {
   const data = getData();
   if (!cryptoKey || !vaultPath) throw new Error('Vault not open');
   if (remoteMode) throw new Error('Cannot write to a remote vault');
-  // Temporarily clear readOnly to allow persist, then set the new value
+
+  // Temporarily clear readOnly so persist() doesn't reject
+  const prev = data.settings.readOnly;
   data.settings.readOnly = false;
-  settingsOps.setReadOnly(data, readOnly);
-  const encrypted = await encrypt(data, cryptoKey, keySalt!);
-  writeVaultFile(vaultPath, encrypted);
+  try {
+    // Set target value and persist in one go — persist serializes vaultData at encrypt time
+    settingsOps.setReadOnly(data, readOnly);
+    await _persist(true);
+  } catch (e) {
+    data.settings.readOnly = prev;
+    throw e;
+  }
 }

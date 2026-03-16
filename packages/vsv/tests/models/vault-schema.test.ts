@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CURRENT_VERSION, DEFAULT_SETTINGS, createEmpty, ensureStructure } from '../../src/models/vault-schema';
+import { CURRENT_VERSION, DEFAULT_SETTINGS, createEmpty, ensureStructure, migrate } from '../../src/models/vault-schema';
 
 describe('vault-schema', () => {
   describe('createEmpty', () => {
@@ -67,6 +67,42 @@ describe('vault-schema', () => {
       const obj = {};
       const result = ensureStructure(obj);
       expect(result).toBe(obj);
+    });
+  });
+
+  describe('migrate', () => {
+    it('passes through current version data unchanged', () => {
+      const data = { version: CURRENT_VERSION, services: { pg: true } };
+      const result = migrate(data);
+      expect(result.version).toBe(CURRENT_VERSION);
+      expect(result.services).toEqual({ pg: true });
+    });
+
+    it('defaults missing version to 1', () => {
+      const data = { services: {} };
+      const result = migrate(data);
+      expect(result).toBeDefined();
+    });
+
+    it('rejects vault version newer than supported', () => {
+      const data = { version: CURRENT_VERSION + 1 };
+      expect(() => migrate(data)).toThrow('newer than supported');
+    });
+
+    it('rejects vault version far in the future', () => {
+      const data = { version: 999 };
+      expect(() => migrate(data)).toThrow('newer than supported');
+    });
+
+    it('ensureStructure calls migrate on old data', () => {
+      // version 1 with missing fields should still work
+      const data = ensureStructure({ version: 1 });
+      expect(data.version).toBe(CURRENT_VERSION);
+      expect(data.services).toEqual({});
+    });
+
+    it('ensureStructure rejects future versions', () => {
+      expect(() => ensureStructure({ version: CURRENT_VERSION + 1 } as any)).toThrow('newer than supported');
     });
   });
 });

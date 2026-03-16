@@ -1,7 +1,8 @@
-// run.ts — vsv run [-e <env>] [-f <vault>] -- <command...>
+// run.ts — vsv run [-e <env>] [-f <vault>] [--secure] -- <command...>
 
 import { Command } from 'commander';
 import { spawn } from 'node:child_process';
+import { PassThrough } from 'node:stream';
 import { promptPassword, resolveFile, isAgentRunning, warn } from '../cli-utils';
 import { createClient } from '../agent/client';
 import * as vault from '../vault';
@@ -37,13 +38,56 @@ function runChild(secretEnv: Record<string, string>, commandArgs: string[]): voi
   });
 }
 
+function runChildSecure(secretEnv: Record<string, string>, commandArgs: string[]): void {
+  const [cmd, ...args] = commandArgs;
+  const json = JSON.stringify(secretEnv);
+
+  // Create a readable stream for fd 3
+  const secretStream = new PassThrough();
+
+  const child = spawn(cmd!, args, {
+    stdio: ['inherit', 'inherit', 'inherit', secretStream],
+    env: {
+      ...process.env,
+      VSV_SECRET_FD: '3',
+      VSV_SECRET_FORMAT: 'json',
+    },
+  });
+
+  // Write secrets to fd 3 and close
+  secretStream.end(json);
+
+  // Forward signals to child process
+  const signals: NodeJS.Signals[] = ['SIGTERM', 'SIGINT', 'SIGHUP'];
+  const handlers = signals.map((sig) => {
+    const handler = () => child.kill(sig);
+    process.on(sig, handler);
+    return { sig, handler };
+  });
+
+  child.on('error', (err) => {
+    process.stderr.write(`Error: failed to start "${cmd}": ${err.message}\n`);
+    process.exit(1);
+  });
+
+  child.on('exit', (code, signal) => {
+    for (const { sig, handler } of handlers) process.removeListener(sig, handler);
+    if (signal) {
+      process.kill(process.pid, signal);
+    } else {
+      process.exit(code ?? 1);
+    }
+  });
+}
+
 export const runCommand = new Command('run')
   .description('Run a command with secrets injected as env vars')
   .option('-e, --env <env>', 'Environment')
   .option('-f, --file <path>', 'Vault file path (or VSV_FILE)')
+  .option('-s, --secure', 'Pass secrets via fd 3 instead of env vars (more secure)')
   .argument('<command...>', 'Command to run')
   .passThroughOptions()
-  .action(async (commandArgs: string[], opts: { env?: string; file?: string }) => {
+  .action(async (commandArgs: string[], opts: { env?: string; file?: string; secure?: boolean }) => {
     let entries: { key: string; value: string }[];
 
     // Agent mode
@@ -65,14 +109,17 @@ export const runCommand = new Command('run')
       const password = await promptPassword();
       await vault.open(filePath, password);
 
-      const data = vault.getData();
-      const result = generateEnv(data, opts.env);
+      try {
+        const data = vault.getData();
+        const result = generateEnv(data, opts.env);
 
-      for (const w of result.warnings) {
-        warn(`Warning: ${w}\n`);
+        for (const w of result.warnings) {
+          warn(`Warning: ${w}\n`);
+        }
+        entries = result.entries;
+      } finally {
+        vault.lock();
       }
-      entries = result.entries;
-      vault.lock();
     }
 
     const secretEnv: Record<string, string> = {};
@@ -80,5 +127,9 @@ export const runCommand = new Command('run')
       secretEnv[entry.key] = entry.value;
     }
 
-    runChild(secretEnv, commandArgs);
+    if (opts.secure) {
+      runChildSecure(secretEnv, commandArgs);
+    } else {
+      runChild(secretEnv, commandArgs);
+    }
   });

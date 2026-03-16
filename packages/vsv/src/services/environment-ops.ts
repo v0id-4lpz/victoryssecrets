@@ -7,7 +7,7 @@ export function getEnvironmentIds(data: VaultData): string[] {
 }
 
 export function hasEnvironment(data: VaultData, envId: string): boolean {
-  return envId in (data.environments || {});
+  return Object.hasOwn(data.environments || {}, envId);
 }
 
 export function addEnvironment(data: VaultData, envId: string, comment = ''): VaultData {
@@ -24,7 +24,7 @@ export function renameEnvironment(data: VaultData, oldId: string, newId: string)
   // Rename env key in all secret values
   for (const fields of Object.values(data.secrets || {})) {
     for (const entry of Object.values(fields)) {
-      if (entry.values && oldId in entry.values) {
+      if (entry.values && Object.hasOwn(entry.values, oldId)) {
         entry.values[newId] = entry.values[oldId]!;
         delete entry.values[oldId];
       }
@@ -45,7 +45,7 @@ export function deleteEnvironment(data: VaultData, envId: string): VaultData {
 }
 
 export function setEnvironmentComment(data: VaultData, envId: string, comment: string): VaultData {
-  if (!data.environments[envId]) throw new Error(`Environment "${envId}" not found`);
+  if (!Object.hasOwn(data.environments, envId)) throw new Error(`Environment "${envId}" not found`);
   data.environments[envId]!.comment = comment;
   return data;
 }

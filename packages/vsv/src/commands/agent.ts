@@ -2,12 +2,12 @@
 
 import { Command } from 'commander';
 import { spawn } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync, unlinkSync, openSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, unlinkSync, openSync, closeSync } from 'node:fs';
 import { resolve as pathResolve } from 'node:path';
 import { promptPassword, resolveFile, isAgentRunning } from '../cli-utils';
 import { startAgent } from '../agent/server';
 import { createClient } from '../agent/client';
-import { getSocketPath, getPidPath } from '../agent/protocol';
+import { getSocketPath, getPidPath, getTokenPath } from '../agent/protocol';
 
 const startCommand = new Command('start')
   .description('Start the agent daemon')
@@ -32,11 +32,20 @@ const startCommand = new Command('start')
       const logPath = getPidPath().replace('.pid', '.log');
       const logFd = openSync(logPath, 'a');
 
-      const child = spawn(process.execPath, args, {
-        detached: true,
-        stdio: ['ignore', logFd, logFd],
-        env: { ...process.env, VSV_PASSWORD_FILE: tmpPwFile },
-      });
+      let child;
+      try {
+        child = spawn(process.execPath, args, {
+          detached: true,
+          stdio: ['ignore', logFd, logFd],
+          env: { ...process.env, VSV_PASSWORD_FILE: tmpPwFile },
+        });
+      } catch (err) {
+        closeSync(logFd);
+        if (existsSync(tmpPwFile)) unlinkSync(tmpPwFile);
+        throw err;
+      }
+      // Close our copy of the log fd — child inherits its own
+      closeSync(logFd);
       child.unref();
 
       // Wait for pid file (written after socket listen + chmod) or child exit
@@ -82,6 +91,7 @@ const stopCommand = new Command('stop')
   .action(() => {
     const pidPath = getPidPath();
     const socketPath = getSocketPath();
+    const tokenPath = getTokenPath();
 
     if (!existsSync(pidPath)) {
       process.stderr.write('Agent is not running\n');
@@ -89,15 +99,20 @@ const stopCommand = new Command('stop')
     }
 
     const pid = parseInt(readFileSync(pidPath, 'utf-8').trim(), 10);
-    try {
-      process.kill(pid, 'SIGTERM');
-      process.stderr.write(`Agent stopped (pid ${pid})\n`);
-    } catch {
-      process.stderr.write(`Agent process ${pid} not found, cleaning up\n`);
+    if (!Number.isInteger(pid) || pid <= 0) {
+      process.stderr.write('Invalid PID in agent file, cleaning up\n');
+    } else {
+      try {
+        process.kill(pid, 'SIGTERM');
+        process.stderr.write(`Agent stopped (pid ${pid})\n`);
+      } catch {
+        process.stderr.write(`Agent process ${pid} not found, cleaning up\n`);
+      }
     }
 
     if (existsSync(pidPath)) unlinkSync(pidPath);
     if (existsSync(socketPath)) unlinkSync(socketPath);
+    if (existsSync(tokenPath)) unlinkSync(tokenPath);
   });
 
 const statusCommand = new Command('status')
@@ -112,6 +127,14 @@ const statusCommand = new Command('status')
     }
 
     const pid = parseInt(readFileSync(pidPath, 'utf-8').trim(), 10);
+    if (!Number.isInteger(pid) || pid <= 0) {
+      process.stdout.write('Agent is not running (corrupt pid file)\n');
+      unlinkSync(pidPath);
+      if (existsSync(socketPath)) unlinkSync(socketPath);
+      const tokenPath = getTokenPath();
+      if (existsSync(tokenPath)) unlinkSync(tokenPath);
+      process.exit(1);
+    }
     try {
       process.kill(pid, 0); // Check if process exists
       process.stdout.write(`Agent running (pid ${pid}, socket ${socketPath})\n`);
@@ -119,6 +142,8 @@ const statusCommand = new Command('status')
       process.stdout.write('Agent is not running (stale pid file)\n');
       unlinkSync(pidPath);
       if (existsSync(socketPath)) unlinkSync(socketPath);
+      const tokenPath = getTokenPath();
+      if (existsSync(tokenPath)) unlinkSync(tokenPath);
       process.exit(1);
     }
   });

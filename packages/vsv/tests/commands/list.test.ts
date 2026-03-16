@@ -72,4 +72,126 @@ describe('list command logic', () => {
     expect(Object.keys(data.services)).toEqual(['db', 'api']);
     expect(Object.keys(data.secrets['db'] || {})).toEqual(['host', 'password']);
   });
+
+  it('service labels and comments are preserved', async () => {
+    await setupVault();
+    const data = vault.getData();
+    expect(data.services['db']?.label).toBe('Database');
+    expect(data.services['db']?.comment).toBe('Main DB');
+    expect(data.services['api']?.label).toBe('API');
+    expect(data.services['api']?.comment).toBe('');
+  });
+
+  it('environment comments are preserved', async () => {
+    await setupVault();
+    expect(vault.getEnvironmentComment('dev')).toBe('Development');
+    expect(vault.getEnvironmentComment('prod')).toBe('Production');
+  });
+
+  it('hasService returns correct values', async () => {
+    await setupVault();
+    expect(vault.hasService('db')).toBe(true);
+    expect(vault.hasService('api')).toBe(true);
+    expect(vault.hasService('nonexistent')).toBe(false);
+  });
+
+  it('hasEnvironment returns correct values', async () => {
+    await setupVault();
+    expect(vault.hasEnvironment('dev')).toBe(true);
+    expect(vault.hasEnvironment('prod')).toBe(true);
+    expect(vault.hasEnvironment('staging')).toBe(false);
+  });
+
+  it('getAllSecrets returns full structure', async () => {
+    await setupVault();
+    const all = vault.getAllSecrets();
+    expect(Object.keys(all)).toEqual(['db', 'api']);
+    expect(Object.keys(all['db']!)).toEqual(['host', 'password']);
+    expect(Object.keys(all['api']!)).toEqual(['key']);
+  });
+
+  it('getSecret returns entry details', async () => {
+    await setupVault();
+    const entry = vault.getSecret('db', 'host');
+    expect(entry).not.toBeNull();
+    expect(entry!.secret).toBe(false);
+    expect(entry!.values['dev']).toBe('localhost');
+    expect(entry!.values['prod']).toBe('db.prod.internal');
+  });
+
+  it('getSecret returns null for missing entry', async () => {
+    await setupVault();
+    expect(vault.getSecret('db', 'nonexistent')).toBeNull();
+    expect(vault.getSecret('nonexistent', 'field')).toBeNull();
+  });
+
+  it('deleteService removes service and its secrets', async () => {
+    await setupVault();
+    await vault.deleteService('db');
+    const data = vault.getData();
+    expect(data.services['db']).toBeUndefined();
+    expect(data.secrets['db']).toBeUndefined();
+    expect(data.services['api']).toBeDefined();
+  });
+
+  it('renameService updates label', async () => {
+    await setupVault();
+    await vault.renameService('db', 'Main Database');
+    expect(vault.getData().services['db']?.label).toBe('Main Database');
+  });
+
+  it('renameServiceId updates service id', async () => {
+    await setupVault();
+    await vault.renameServiceId('db', 'database');
+    const data = vault.getData();
+    expect(data.services['db']).toBeUndefined();
+    expect(data.services['database']?.label).toBe('Database');
+    expect(data.secrets['database']).toBeDefined();
+    expect(data.secrets['db']).toBeUndefined();
+  });
+
+  it('renameEnvironment updates env id across secrets', async () => {
+    await setupVault();
+    await vault.renameEnvironment('dev', 'development');
+    const data = vault.getData();
+    expect(data.environments['dev']).toBeUndefined();
+    expect(data.environments['development']).toBeDefined();
+    expect(data.secrets['db']?.['host']?.values['development']).toBe('localhost');
+    expect(data.secrets['db']?.['host']?.values['dev']).toBeUndefined();
+  });
+
+  it('deleteEnvironment removes env and its secret values', async () => {
+    await setupVault();
+    await vault.deleteEnvironment('dev');
+    const data = vault.getData();
+    expect(data.environments['dev']).toBeUndefined();
+    expect(data.secrets['db']?.['host']?.values['dev']).toBeUndefined();
+    expect(data.secrets['db']?.['host']?.values['prod']).toBe('db.prod.internal');
+  });
+
+  it('setServiceComment updates comment', async () => {
+    await setupVault();
+    await vault.setServiceComment('api', 'REST API service');
+    expect(vault.getData().services['api']?.comment).toBe('REST API service');
+  });
+
+  it('setEnvironmentComment updates comment', async () => {
+    await setupVault();
+    await vault.setEnvironmentComment('dev', 'Local development');
+    expect(vault.getEnvironmentComment('dev')).toBe('Local development');
+  });
+
+  it('template CRUD works', async () => {
+    await setupVault();
+    await vault.setTemplateEntry('DB_HOST', '${db.host}');
+    await vault.setTemplateEntry('DB_PASS', '${db.password}');
+
+    const tpl = vault.getTemplate();
+    expect(tpl['DB_HOST']).toBe('${db.host}');
+    expect(tpl['DB_PASS']).toBe('${db.password}');
+
+    await vault.deleteTemplateEntry('DB_PASS');
+    expect(vault.getTemplate()['DB_PASS']).toBeUndefined();
+    expect(vault.getTemplate()['DB_HOST']).toBe('${db.host}');
+  });
 });

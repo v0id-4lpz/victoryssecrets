@@ -37,7 +37,10 @@ export async function promptPassword(prompt = 'Password: '): Promise<string> {
       process.stderr.write(`Error: password file not found: ${passwordFile}\n`);
       process.exit(1);
     }
-    return readFileSync(passwordFile, 'utf-8').trim();
+    const buf = readFileSync(passwordFile);
+    const pw = buf.toString('utf-8').trim();
+    buf.fill(0);
+    return pw;
   }
 
   // If stdin is not a TTY (piped), read from stdin directly
@@ -67,7 +70,7 @@ export async function promptPassword(prompt = 'Password: '): Promise<string> {
 
     let password = '';
 
-    process.stdin.on('data', (chunk: Buffer) => {
+    const onData = (chunk: Buffer) => {
       const str = chunk.toString();
       for (const char of str) {
         if (char === '\n' || char === '\r') {
@@ -75,6 +78,7 @@ export async function promptPassword(prompt = 'Password: '): Promise<string> {
           if (process.stdin.isTTY) {
             process.stdin.setRawMode?.(false);
           }
+          process.stdin.removeListener('data', onData);
           rl.close();
           resolve(password);
           return;
@@ -83,12 +87,15 @@ export async function promptPassword(prompt = 'Password: '): Promise<string> {
           password = password.slice(0, -1);
         } else if (char === '\u0003') {
           // Ctrl+C
+          process.stdin.removeListener('data', onData);
           process.stderr.write('\n');
           process.exit(1);
         } else {
           password += char;
         }
       }
-    });
+    };
+
+    process.stdin.on('data', onData);
   });
 }

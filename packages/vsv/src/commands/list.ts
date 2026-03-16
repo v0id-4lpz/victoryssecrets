@@ -78,6 +78,7 @@ export const listCommand = new Command('list')
   .option('--json', 'Output as JSON')
   .action(async (type: string | undefined, opts: { env?: string; file?: string; json?: boolean }) => {
     let data: VaultData;
+    let openedLocally = false;
 
     // Agent mode
     if (isAgentRunning()) {
@@ -89,21 +90,24 @@ export const listCommand = new Command('list')
       const filePath = resolveFile(opts);
       const password = await promptPassword();
       await vault.open(filePath, password);
+      openedLocally = true;
       data = vault.getData();
     }
 
-    if (opts.json) {
-      const target = type?.toLowerCase();
-      let output: unknown;
-      if (!target || target === 'all') output = { services: data.services, environments: data.environments, secrets: data.secrets };
-      else if (target === 'services' || target === 'svc') output = data.services;
-      else if (target === 'envs' || target === 'environments' || target === 'env') output = data.environments;
-      else if (target === 'secrets') output = data.secrets;
-      else { process.stderr.write(`Unknown type "${target}". Use: services, envs, secrets\n`); process.exit(1); }
-      process.stdout.write(JSON.stringify(output, null, 2) + '\n');
-    } else {
-      handleType(data, type, opts.env);
+    try {
+      if (opts.json) {
+        const target = type?.toLowerCase();
+        let output: unknown;
+        if (!target || target === 'all') output = { services: data.services, environments: data.environments, secrets: data.secrets };
+        else if (target === 'services' || target === 'svc') output = data.services;
+        else if (target === 'envs' || target === 'environments' || target === 'env') output = data.environments;
+        else if (target === 'secrets') output = data.secrets;
+        else { process.stderr.write(`Unknown type "${target}". Use: services, envs, secrets\n`); process.exit(1); }
+        process.stdout.write(JSON.stringify(output, null, 2) + '\n');
+      } else {
+        handleType(data, type, opts.env);
+      }
+    } finally {
+      if (openedLocally) vault.lock();
     }
-
-    if (!isAgentRunning()) vault.lock();
   });

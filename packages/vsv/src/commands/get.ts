@@ -40,18 +40,20 @@ export const getCommand = new Command('get')
     const password = await promptPassword();
     await vault.open(filePath, password);
 
-    const serviceId = ref.slice(0, dotIndex);
-    const field = ref.slice(dotIndex + 1);
-    const data = vault.getData();
-    const entry = data.secrets?.[serviceId]?.[field];
-    const value = resolveValue(entry, opts.env);
+    try {
+      const serviceId = ref.slice(0, dotIndex);
+      const field = ref.slice(dotIndex + 1);
+      const data = vault.getData();
+      const entry = data.secrets?.[serviceId]?.[field];
+      const value = resolveValue(entry, opts.env);
 
-    if (value === undefined) {
-      process.stderr.write(`Error: secret "${ref}" not found for env "${opts.env}"\n`);
+      if (value === undefined) {
+        process.stderr.write(`Error: secret "${ref}" not found for env "${opts.env}"\n`);
+        process.exit(1);
+      }
+
+      process.stdout.write(value + (process.stdout.isTTY ? '\n' : ''));
+    } finally {
       vault.lock();
-      process.exit(1);
     }
-
-    process.stdout.write(value + (process.stdout.isTTY ? '\n' : ''));
-    vault.lock();
   });

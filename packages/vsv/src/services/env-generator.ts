@@ -3,6 +3,12 @@
 import type { VaultData, GenerateResult, EnvEntry } from '../types/vault';
 import { GLOBAL_ENV } from '../models/vault-schema';
 
+/** Escape a value for safe .env output (prevent newline injection) */
+function escapeEnvValue(value: string): string {
+  if (/[\n\r]/.test(value)) return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r')}"`;
+  return value;
+}
+
 export function resolveSecrets(vault: VaultData, envId: string): Record<string, Record<string, string>> {
   const resolved: Record<string, Record<string, string>> = {};
   for (const [serviceId, fields] of Object.entries(vault.secrets || {})) {
@@ -46,7 +52,7 @@ export function generateEnv(vault: VaultData, envId: string): GenerateResult {
     if (refMatch) {
       const ref = refMatch[1]!;
       if (magicVars[ref] !== undefined) {
-        lines.push(`${key}=${magicVars[ref]}`);
+        lines.push(`${key}=${escapeEnvValue(magicVars[ref]!)}`);
         entries.push({ key, value: magicVars[ref]!, source: 'auto', secret: false });
         continue;
       }
@@ -65,11 +71,11 @@ export function generateEnv(vault: VaultData, envId: string): GenerateResult {
         lines.push(`${key}=`);
         entries.push({ key, value: '', source: null, secret });
       } else {
-        lines.push(`${key}=${value}`);
+        lines.push(`${key}=${escapeEnvValue(value)}`);
         entries.push({ key, value, source, secret });
       }
     } else {
-      lines.push(`${key}=${rawValue}`);
+      lines.push(`${key}=${escapeEnvValue(rawValue)}`);
       entries.push({ key, value: rawValue, source: 'static', secret: false });
     }
   }
