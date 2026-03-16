@@ -23,6 +23,7 @@ jobs:
           max_attempts: 3
           timeout_minutes: 5
           command: npm ci
+      - run: npm run typecheck --workspaces
       - run: npm test
 
   check-version:
@@ -36,8 +37,8 @@ jobs:
           fetch-depth: 2
       - id: check
         run: |
-          CURRENT=$(node -p "require('./package.json').version")
-          PREVIOUS=$(git show HEAD~1:package.json | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).version")
+          CURRENT=$(node -p "require('./packages/electron/package.json').version")
+          PREVIOUS=$(git show HEAD~1:packages/electron/package.json | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).version")
           echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
           if [ "$CURRENT" != "$PREVIOUS" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -63,11 +64,11 @@ jobs:
           max_attempts: 3
           timeout_minutes: 10
           command: npm ci
-      - run: npm run build -- --publish never
+      - run: npm run build --workspace=packages/electron -- --publish never
       - uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.os }}
-          path: dist/*
+          path: packages/electron/dist/*
 
   release:
     needs: [check-version, build]

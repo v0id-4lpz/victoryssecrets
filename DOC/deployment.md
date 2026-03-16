@@ -1,8 +1,8 @@
-# Déploiement
+# Deployment
 
-## Principe
+## Overview
 
-Le fichier `.vsv` est un blob chiffré AES-256-GCM. Il peut être commité dans le repo, hébergé sur un serveur, ou monté comme volume. Seul le password permet de le déchiffrer.
+The `.vsv` file is an AES-256-GCM encrypted blob. It can be committed to the repo, hosted on a server, or mounted as a volume. Only the password can decrypt it.
 
 ## GitHub Actions
 
@@ -13,17 +13,17 @@ jobs:
       - uses: actions/checkout@v4
       - run: npm ci
 
-      # Validation : tous les secrets existent pour prod ?
+      # Validation: do all secrets exist for prod?
       - run: npx vsv check -e prod -f secrets.vsv
         env:
           VSV_PASSWORD: ${{ secrets.VSV_PASSWORD }}
 
-      # Option A : injecter tous les secrets d'un coup
+      # Option A: inject all secrets at once
       - run: npx vsv run -e prod -f secrets.vsv -- ./deploy.sh
         env:
           VSV_PASSWORD: ${{ secrets.VSV_PASSWORD }}
 
-      # Option B : lire un secret spécifique
+      # Option B: read a specific secret
       - run: |
           DB_URL=$(npx vsv get db.url -e prod -f secrets.vsv)
           echo "::add-mask::$DB_URL"
@@ -33,7 +33,7 @@ jobs:
 
 ## Docker
 
-### Avec `VSV_PASSWORD`
+### With `VSV_PASSWORD`
 
 ```dockerfile
 FROM node:22-alpine
@@ -46,7 +46,7 @@ CMD ["npx", "vsv", "run", "-e", "prod", "-f", "secrets.vsv", "--", "node", "serv
 docker run -e VSV_PASSWORD=... myapp
 ```
 
-### Avec Docker secrets (`VSV_PASSWORD_FILE`)
+### With Docker secrets (`VSV_PASSWORD_FILE`)
 
 ```yaml
 # docker-compose.yml
@@ -64,7 +64,7 @@ secrets:
     file: ./vsv-password.txt
 ```
 
-`VSV_PASSWORD_FILE` est plus sécurisé que `VSV_PASSWORD` : les env vars sont visibles dans `/proc/<pid>/environ` et dans les logs de crash. Un fichier monté en mémoire ne l'est pas.
+`VSV_PASSWORD_FILE` is more secure than `VSV_PASSWORD`: env vars are visible in `/proc/<pid>/environ` and in crash logs. A memory-mounted file is not.
 
 ## Kubernetes
 
@@ -97,57 +97,57 @@ spec:
             secretName: vsv-password
 ```
 
-## Vault distant (read-only)
+## Remote vaults (read-only)
 
-Le vault peut être hébergé sur un serveur HTTP au lieu d'être dans le repo :
+The vault can be hosted on an HTTP server instead of being in the repo:
 
 ```bash
 # CI
 npx vsv run -e prod -f https://internal.company.com/vault.vsv -- ./deploy.sh
 
-# Agent avec refresh automatique
+# Agent with automatic refresh
 vsv agent start -f https://internal.company.com/vault.vsv -e prod -d --poll 5
 ```
 
-Le serveur ne voit que du binaire chiffré. Les mutations sont bloquées (read-only).
+The server only sees encrypted binary. Mutations are blocked (read-only).
 
-Si le password du vault distant change, il faut redémarrer l'agent avec le nouveau password.
+If the remote vault password changes, restart the agent with the new password.
 
-## Agent daemon en production
+## Agent daemon in production
 
 ```bash
-# Démarrer en daemon (se détache du terminal)
+# Start as daemon (detaches from terminal)
 vsv agent start -f ./secrets.vsv -e prod -d
 # Agent started in background (pid 1234, log /tmp/vsv-agent-501.log)
 
-# Vérifier le statut
+# Check status
 vsv agent status
 
 # Logs
 tail -f /tmp/vsv-agent-501.log
 # [2026-03-13T10:12:22.342Z] Agent started (pid 1234, env prod, socket /tmp/vsv-agent-501.sock)
 
-# Arrêt
+# Stop
 vsv agent stop
 ```
 
-L'agent :
-- Se détache du terminal (survit à la fermeture du shell)
-- Ignore SIGHUP
-- Auto-lock après inactivité (configurable)
-- Socket en mode `0600` (owner only)
-- Utilise `$XDG_RUNTIME_DIR` sur Linux (`/run/user/<uid>/`, mode `0700`)
-- Le password est passé via un fichier temporaire `0600` (pas dans `ps`, pas dans les env vars)
+The agent:
+- Detaches from the terminal (survives shell close)
+- Ignores SIGHUP
+- Auto-locks after inactivity (configurable)
+- Socket set to mode `0600` (owner only)
+- Uses `$XDG_RUNTIME_DIR` on Linux (`/run/user/<uid>/`, mode `0700`)
+- Password is passed via a temporary `0600` file (not in `ps`, not in env vars)
 
-## Intégration Nuxt
+## Nuxt integration
 
-### Option A : `vsv run` (injection au démarrage)
+### Option A: `vsv run` (injection at startup)
 
 ```bash
 vsv run -e prod -f ./secrets.vsv -- npx nuxt dev
 ```
 
-Le template du vault mappe les variables Nuxt :
+The vault template maps Nuxt variables:
 
 ```
 NUXT_DB_HOST=${db.host}
@@ -155,7 +155,7 @@ NUXT_DB_PASSWORD=${db.password}
 NUXT_PUBLIC_APP_URL=${app.url}
 ```
 
-### Option B : Agent + plugin serveur (live querying)
+### Option B: Agent + server plugin (live querying)
 
 ```bash
 vsv agent start -f ./secrets.vsv -e prod -d
@@ -184,14 +184,14 @@ export default defineEventHandler(async () => {
 })
 ```
 
-Avantage : les secrets sont toujours à jour (rotation sans restart).
+Advantage: secrets are always up to date (rotation without restart).
 
-## Sécurité
+## Security
 
-- **Chiffrement** : AES-256-GCM + Argon2id (256MB, 3 itérations, parallélisme 4)
-- **Password jamais stocké** : seule la CryptoKey non-extractable est en mémoire
-- **Auto-lock** : verrouillage automatique après inactivité
-- **Socket permissions** : `0600` (owner only), dans `$XDG_RUNTIME_DIR` quand disponible
-- **Daemon password** : passé via fichier temporaire `0600`, jamais dans les args ou env vars du process
-- **Vault distant** : le serveur HTTP ne voit que du binaire chiffré
-- **`vsv check`** : validation des secrets manquants comme gate CI
+- **Encryption**: AES-256-GCM + Argon2id (256 MB, 8 iterations, parallelism 4)
+- **Password never stored**: only the non-extractable CryptoKey is in memory
+- **Auto-lock**: automatic lock after inactivity
+- **Socket permissions**: `0600` (owner only), in `$XDG_RUNTIME_DIR` when available
+- **Daemon password**: passed via temporary `0600` file, never in args or process env vars
+- **Remote vault**: the HTTP server only sees encrypted binary
+- **`vsv check`**: missing secret validation as a CI gate

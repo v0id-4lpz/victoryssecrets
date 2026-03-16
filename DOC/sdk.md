@@ -1,62 +1,70 @@
 # vsv SDK
 
-Deux modes d'utilisation programmatique : **library directe** (le process ouvre le vault) ou **client SDK** (connexion à un agent).
+Two modes of programmatic usage: **direct library** (the process opens the vault) or **client SDK** (connects to an agent).
 
-## Library directe
+## Direct library
 
-Le process ouvre le vault et le garde en mémoire. Le password est nécessaire au démarrage.
+The process opens the vault and keeps it in memory. The password is required at startup.
 
 ```ts
 import { vault } from 'vsv'
 
 await vault.open('./secrets.vsv', process.env.VSV_PASSWORD!)
 
-// Lire un secret (shorthand)
+// Read a secret (shorthand)
 const dbHost = vault.get('db.host', 'prod')
 
-// Lire un secret (détaillé)
+// Read a secret (detailed)
 const entry = vault.getSecret('db', 'host')
 // { secret: false, values: { dev: "localhost", prod: "db.prod.internal" } }
 
-// Générer un .env résolu
+// Generate a resolved .env
 import { envGenerator } from 'vsv'
 const { output, entries, warnings } = envGenerator.generateEnv(vault.getData(), 'prod')
 
-// Fermer (efface la CryptoKey et les données de la mémoire)
+// Close (clears the CryptoKey and data from memory)
 vault.lock()
 ```
 
-### API vault
+### Vault API
 
-| Méthode | Description |
-|---------|-------------|
-| `open(path, password)` | Ouvre un vault (local ou URL distante) |
-| `create(path, password)` | Crée un nouveau vault |
-| `lock()` | Efface tout de la mémoire |
-| `getData()` | Données complètes du vault |
-| `get(ref, envId)` | Raccourci `service.field` → valeur |
-| `getSecret(serviceId, field)` | SecretEntry complète |
-| `isUnlocked()` | État du vault |
-| `isRemote()` | `true` si ouvert depuis une URL |
-| `refresh()` | Re-fetch un vault distant |
-| `addService(id, label)` | Crée un service |
-| `deleteService(id)` | Supprime un service |
-| `setSecret(serviceId, field, opts?)` | Crée/modifie un secret |
-| `setSecretValue(serviceId, field, envId, value)` | Set une valeur |
-| `deleteSecret(serviceId, field)` | Supprime un secret |
-| `addEnvironment(envId)` | Crée un environnement |
-| `deleteEnvironment(envId)` | Supprime un environnement |
+| Method | Description |
+|--------|-------------|
+| `open(path, password)` | Open a vault (local path or remote URL) |
+| `create(path, password)` | Create a new vault |
+| `lock()` | Clear everything from memory |
+| `getData()` | Full vault data |
+| `get(ref, envId)` | Shorthand `service.field` → value |
+| `getSecret(serviceId, field)` | Full SecretEntry |
+| `getAllSecrets()` | All secrets by service |
+| `isUnlocked()` | Vault state |
+| `isReadOnly()` | `true` if remote or read-only flag is set |
+| `isRemote()` | `true` if opened from a URL |
+| `refresh()` | Re-fetch a remote vault |
+| `persist()` | Write to disk (serialized via internal mutex) |
+| `changePassword(current, new)` | Re-encrypt vault with a new password |
+| `addService(id, label)` | Create a service |
+| `deleteService(id)` | Delete a service |
+| `renameServiceId(oldId, newId)` | Rename a service key |
+| `setSecret(serviceId, field, opts?)` | Create/update a secret |
+| `setSecretValue(serviceId, field, envId, value)` | Set a value for a specific env |
+| `deleteSecret(serviceId, field)` | Delete a secret |
+| `moveSecret(oldSvc, oldField, newSvc, newField)` | Move a secret (updates template refs) |
+| `addEnvironment(envId)` | Create an environment |
+| `deleteEnvironment(envId)` | Delete an environment |
+| `renameEnvironment(oldId, newId)` | Rename an environment |
+| `setReadOnly(bool)` | Toggle read-only mode |
 
-Les mutations appellent `persist()` automatiquement. `persist()` est bloqué sur les vaults distants (read-only).
+Mutations call `persist()` automatically. `persist()` is blocked on remote vaults and when read-only mode is enabled. Concurrent calls to `persist()` are serialized via an internal mutex.
 
 ---
 
 ## Client SDK
 
-Se connecte à un agent daemon via Unix socket. Pas besoin de password dans l'app.
+Connects to an agent daemon via Unix socket. No password needed in the app.
 
 ```bash
-# Démarrer l'agent d'abord
+# Start the agent first
 vsv agent start -f ./secrets.vsv -e prod -d
 ```
 
@@ -64,90 +72,90 @@ vsv agent start -f ./secrets.vsv -e prod -d
 import { createClient } from 'vsv'
 
 const client = createClient()
-// ou: createClient({ env: 'dev' })          — default env client
-// ou: createClient({ connectTimeout: 3000 }) — timeout connexion (défaut 5s)
+// or: createClient({ env: 'dev' })          — client default env
+// or: createClient({ connectTimeout: 3000 }) — connection timeout (default 5s)
 
-// Lire un secret
-const dbHost = await client.get('db.host')         // utilise l'env par défaut
-const dbHostDev = await client.get('db.host', 'dev') // env explicite
+// Read a secret
+const dbHost = await client.get('db.host')           // uses the default env
+const dbHostDev = await client.get('db.host', 'dev') // explicit env
 
-// Générer le .env complet
+// Generate the full .env
 const { output, entries, warnings } = await client.env('prod')
 
-// Vérifier l'existence
+// Check existence
 await client.hasService('db')        // true
 await client.hasEnvironment('prod')  // true
 
-// Mutations (persistées sur disque via l'agent)
+// Mutations (persisted to disk via the agent)
 await client.addService('redis', 'Redis')
 await client.setSecret('redis', 'url', { secret: true, values: { prod: 'redis://prod:6379' } })
 await client.setSecretValue('redis', 'url', 'staging', 'redis://staging:6379')
 
-// Refresh (vaults distants)
+// Refresh (remote vaults)
 await client.refresh()
 
-// Déconnexion
+// Disconnect
 client.disconnect()
 
-// Verrouillage + arrêt agent
+// Lock vault + stop agent
 await client.lock()
 ```
 
-### Résolution d'environnement
+### Environment resolution
 
-Chaîne de résolution pour `client.get('db.host')` :
+Resolution chain for `client.get('db.host')`:
 
-1. Paramètre `envId` explicite
-2. Default env du client (`createClient({ env: 'dev' })`)
-3. Default env de l'agent (`vsv agent start -e prod`)
-4. Erreur si aucun env
+1. Explicit `envId` parameter
+2. Client default env (`createClient({ env: 'dev' })`)
+3. Agent default env (`vsv agent start -e prod`)
+4. Error if no env is available
 
-### Options du client
+### Client options
 
 ```ts
 interface ClientOptions {
-  socketPath?: string    // Chemin socket (défaut : auto-détecté)
-  env?: string           // Environnement par défaut
-  connectTimeout?: number // Timeout connexion en ms (défaut : 5000)
-  requestTimeout?: number // Timeout requête en ms (défaut : 30000)
+  socketPath?: string    // Socket path (default: auto-detected)
+  env?: string           // Default environment
+  connectTimeout?: number // Connection timeout in ms (default: 5000)
+  requestTimeout?: number // Request timeout in ms (default: 30000)
 }
 ```
 
-### API client
+### Client API
 
-| Méthode | Description |
-|---------|-------------|
-| `get(ref, envId?)` | Raccourci `service.field` → valeur |
-| `getSecret(serviceId, field)` | SecretEntry complète |
-| `getData()` | VaultData complet |
-| `getInfo()` | Info agent (`{ env }`) |
-| `env(envId?)` | Génère le .env résolu |
-| `hasService(id)` | Vérifie l'existence |
-| `hasEnvironment(envId)` | Vérifie l'existence |
-| `isRemote()` | `true` si vault distant |
-| `refresh()` | Re-fetch vault distant |
-| `addService(id, label, comment?)` | Crée un service |
-| `deleteService(id)` | Supprime un service |
-| `setSecret(serviceId, field, opts?)` | Crée/modifie un secret |
-| `setSecretValue(serviceId, field, envId, value)` | Set une valeur |
-| `deleteSecret(serviceId, field)` | Supprime un secret |
-| `lock()` | Verrouille le vault + arrête l'agent |
-| `disconnect()` | Ferme la connexion |
+| Method | Description |
+|--------|-------------|
+| `get(ref, envId?)` | Shorthand `service.field` → value |
+| `getSecret(serviceId, field)` | Full SecretEntry |
+| `getData()` | Full VaultData |
+| `getInfo()` | Agent info (`{ env }`) |
+| `env(envId?)` | Generate the resolved .env |
+| `hasService(id)` | Check existence |
+| `hasEnvironment(envId)` | Check existence |
+| `isRemote()` | `true` if remote vault |
+| `refresh()` | Re-fetch remote vault |
+| `addService(id, label, comment?)` | Create a service |
+| `deleteService(id)` | Delete a service |
+| `setSecret(serviceId, field, opts?)` | Create/update a secret |
+| `setSecretValue(serviceId, field, envId, value)` | Set a value |
+| `deleteSecret(serviceId, field)` | Delete a secret |
+| `lock()` | Lock the vault + stop the agent |
+| `disconnect()` | Close the connection |
 
 ---
 
-## Exports du package
+## Package exports
 
 ```ts
-import { vault } from 'vsv'             // Orchestrateur stateful
+import { vault } from 'vsv'             // Stateful orchestrator
 import { createClient } from 'vsv'      // Client SDK
 
-// Services purs (logique métier sans side effects)
-import { envGenerator } from 'vsv'      // Résolution secrets + génération .env
-import { serviceOps } from 'vsv'        // CRUD services
-import { environmentOps } from 'vsv'    // CRUD environnements
-import { secretOps } from 'vsv'         // CRUD secrets
-import { templateOps } from 'vsv'       // CRUD templates
-import { settingsOps } from 'vsv'       // CRUD settings
-import { search } from 'vsv'            // Index de recherche
+// Pure services (business logic, no side effects)
+import { envGenerator } from 'vsv'      // Secret resolution + .env generation
+import { serviceOps } from 'vsv'        // Service CRUD
+import { environmentOps } from 'vsv'    // Environment CRUD
+import { secretOps } from 'vsv'         // Secret CRUD
+import { templateOps } from 'vsv'       // Template CRUD
+import { settingsOps } from 'vsv'       // Settings CRUD
+import { search } from 'vsv'            // Search index
 ```
